@@ -12,11 +12,16 @@
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
     "test": "bun test",
+    "test:services": "bun test packages/services/test/discovery.test.ts",
+    "test:execution": "bun test packages/services/test/execution.test.ts",
+    "test:pi": "bun run build && rm -rf .pi-tests && tsc -p tsconfig.pi-tests.json && mkdir -p .pi-tests/packages/services && cp -R packages/services/dist .pi-tests/packages/services/dist && cp packages/services/package.json .pi-tests/packages/services/package.json && node .pi-tests/tests/pi/lifecycle.js",
     "check:workspace": "bun scripts/check-workspace.ts",
+    "check:package": "bun scripts/check-package.ts",
     "test:boundaries": "bun test tests/tooling/boundaries.test.ts",
-    "check": "bun run build && bun run check:workspace && bun run test:boundaries && bun run typecheck && bun run lint && bun test tests/tooling/workspace.test.ts"
+    "check": "bun run build && bun run test:services && bun run test:execution && bun run test:pi && bun run check:package && bun run check:workspace && bun run test:boundaries && bun run typecheck && bun run lint && bun test tests/tooling/workspace.test.ts"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.87.0",
     "@eslint/js": "9.36.0",
     "@types/bun": "1.2.22",
     "@types/node": "24.5.2",

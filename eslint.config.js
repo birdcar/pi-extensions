@@ -6,7 +6,13 @@ const bunGlobalMessage = "Production packages must not use the Bun global.";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/coverage/**", "**/*.tsbuildinfo"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/coverage/**",
+      "**/*.tsbuildinfo",
+      ".pi-tests/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -22,7 +28,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["packages/*/src/**/*.ts"],
+    files: ["packages/*/src/**/*.ts", "tests/pi/**/*.ts", "tests/fixtures/services/**/*.ts"],
     rules: {
       "no-restricted-globals": ["error", { name: "Bun", message: bunGlobalMessage }],
       "no-restricted-imports": [

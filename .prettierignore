@@ -7,4 +7,5 @@ bun.lock
 .cache
 .eslintcache
 *.tsbuildinfo
+.pi-tests
 docs/ideation/**

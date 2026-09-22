@@ -23,6 +23,7 @@ Production package code under `packages/*/src/**` must use portable NodeNext ESM
 - Do not add TS-only path aliases to production packages.
 - Service contracts must not import or initialize providers, registries, extension hosts, or
   process-global buses.
+- Read `docs/service-discovery.md` before changing service contracts, providers, or consumers.
 
 ## Checks
 
