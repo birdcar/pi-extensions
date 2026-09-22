@@ -21,6 +21,8 @@ export function makePi() {
   const shutdown: Array<() => void | Promise<void>> = [];
   const sessionStart: Array<(event: unknown, ctx: any) => void> = [];
   const commands = new Map<string, any>();
+  const tools = new Map<string, any>();
+  const userMessages: any[] = [];
   const messages: any[] = [];
   return {
     pi: {
@@ -33,12 +35,29 @@ export function makePi() {
       registerCommand(name: string, options: any) {
         commands.set(name, options);
       },
+      registerTool(tool: any) {
+        tools.set(tool.name, tool);
+      },
+      getActiveTools() {
+        return [...tools.keys()];
+      },
+      getAllTools() {
+        return [...tools.values()].map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+        }));
+      },
+      sendUserMessage(content: any, options?: any) {
+        userMessages.push({ content, options });
+      },
       sendMessage(message: any) {
         messages.push(message);
       },
     } as any,
     bus,
     commands,
+    tools,
+    userMessages,
     messages,
     start(ctx: any) {
       for (const h of sessionStart) h({}, ctx);
@@ -63,19 +82,24 @@ export function makeProfile() {
 }
 
 export function makeCtx(root = makeProfile()) {
-  const model = { provider: "test", id: "m1" };
+  const model = { provider: "test", id: "m1", contextWindow: 50_000, maxTokens: 4096 };
   const calls: any[] = [];
   const ctx = {
     cwd: process.cwd(),
     model,
     hasUI: false,
     signal: undefined,
-    ui: { notify() {}, input: async () => undefined },
+    ui: {
+      notify() {},
+      input: async () => undefined,
+      select: async () => undefined,
+      confirm: async () => false,
+      editor: async (_title: string, prefill?: string) => prefill,
+    },
     isProjectTrusted: () => true,
     sessionManager: { getBranch: () => [] },
     modelRegistry: {
-      find: (provider: string, id: string) =>
-        provider === "test" && id === "m1" ? model : undefined,
+      find: (provider: string, id: string) => (provider === "test" ? { ...model, id } : undefined),
       hasConfiguredAuth: () => true,
       complete: async (_model: any, context: any) => {
         calls.push(context);

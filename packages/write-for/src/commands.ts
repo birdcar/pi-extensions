@@ -2,12 +2,17 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-c
 import type { DraftRequest, RewriteRequest, WritingResult } from "./contract.js";
 import { createWritingEngine, type WritingEngineOptions } from "./engine.js";
 import { createWriteForError } from "./errors.js";
+import type { TrainingCommandOptions, TrainingManager } from "./training.js";
 
 interface ParsedCommand {
   channel?: string;
   register?: string;
   rewrite?: string;
   topic?: string;
+}
+
+export interface ParsedTrainingCommand extends Omit<TrainingCommandOptions, "mode"> {
+  mode?: "train" | "retrain";
 }
 
 function tokenize(input: string): string[] {
@@ -47,6 +52,52 @@ export function parseWriteForArgs(args: string): ParsedCommand {
       "INVALID_REQUEST",
       "--rewrite is mutually exclusive with a draft topic",
     );
+  }
+  return parsed;
+}
+
+export function parseTrainingArgs(args: string): ParsedTrainingCommand {
+  const tokens = tokenize(args);
+  const parsed: ParsedTrainingCommand = {};
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]!;
+    if (token === "--style") {
+      parsed.scope = "style";
+      continue;
+    }
+    if (token === "--register") {
+      const value = tokens[++i];
+      if (!value) throw createWriteForError("INVALID_REQUEST", "--register requires a value");
+      if (!parsed.scope) parsed.scope = "register";
+      parsed.register = value;
+      continue;
+    }
+    if (token === "--channel") {
+      const value = tokens[++i];
+      if (!value) throw createWriteForError("INVALID_REQUEST", "--channel requires a value");
+      if (!parsed.scope) parsed.scope = "channel";
+      parsed.channel = value;
+      continue;
+    }
+    if (token === "--all") {
+      parsed.scope = "all";
+      continue;
+    }
+    if (token === "--source" || token === "--folder") {
+      const value = tokens[++i];
+      if (!value) throw createWriteForError("INVALID_REQUEST", `${token} requires a value`);
+      parsed.sourceFolder = value;
+      continue;
+    }
+    if (token === "--project") {
+      parsed.saveTarget = "project";
+      continue;
+    }
+    if (token === "--global") {
+      parsed.saveTarget = "global";
+      continue;
+    }
+    throw createWriteForError("INVALID_REQUEST", `unknown training flag: ${token}`);
   }
   return parsed;
 }
@@ -107,7 +158,7 @@ async function present(
 
 export function registerWriteForCommands(
   pi: ExtensionAPI,
-  options: WritingEngineOptions = {},
+  options: WritingEngineOptions & { training?: TrainingManager } = {},
 ): void {
   const engine = createWritingEngine(options);
   pi.registerCommand("write-for", {
@@ -145,4 +196,29 @@ export function registerWriteForCommands(
       return present(pi, ctx, await engine.draft(ctx, request));
     },
   });
+
+  if (options.training) {
+    pi.registerCommand("train-voice", {
+      description: "Start an interactive Pi Write For voice-learning session",
+      async handler(args, ctx) {
+        const parsed = parseTrainingArgs(args);
+        const session = await options.training!.start(ctx, { ...parsed, mode: "train" });
+        ctx.ui.notify?.(
+          `Started Pi Write For training for ${session.scope}; save root: ${session.root}`,
+          "info",
+        );
+      },
+    });
+    pi.registerCommand("retrain-voice", {
+      description: "Start an interactive Pi Write For retraining session",
+      async handler(args, ctx) {
+        const parsed = parseTrainingArgs(args);
+        const session = await options.training!.start(ctx, { ...parsed, mode: "retrain" });
+        ctx.ui.notify?.(
+          `Started Pi Write For retraining for ${session.scope}; save root: ${session.root}`,
+          "info",
+        );
+      },
+    });
+  }
 }

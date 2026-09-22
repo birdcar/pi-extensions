@@ -18,15 +18,35 @@ Supported files:
 Optional YAML frontmatter supports `model: provider/model-id`; channel files may also set
 `defaultRegister`.
 
-## Command
+## Commands
 
 ```text
 /write-for <channel> [--register <name>] [topic]
 /write-for <channel> [--register <name>] --rewrite <text>
+/train-voice [--style|--register <name>|--channel <name>|--all] [--source <folder>] [--global|--project]
+/retrain-voice [--style|--register <name>|--channel <name>|--all] [--source <folder>] [--global|--project]
 ```
 
-If topic is omitted, the command summarizes visible user/assistant text from the current Pi session
-branch. It does not inspect Git or include tool-call arguments/results.
+If `/write-for` topic is omitted, the command summarizes visible user/assistant text from the
+current Pi session branch. It does not inspect Git or include tool-call arguments/results.
+
+`/train-voice` and `/retrain-voice` require Pi UI/RPC. They start a cooperative main-session
+interview and expose writer-local tools (`write_for_interview`, `write_for_samples`, and
+`write_for_profile`) so the host agent can reuse already-authorized local/MCP/CLI tools without the
+writer extension installing connectors or switching the host model.
+
+Training supports approved local folders containing UTF-8 `.txt`, `.md`/`.markdown`, text-based
+`.pdf`, and `.docx` files. PDF/DOCX extraction is native and text-only: there is no OCR, rendering,
+legacy `.doc`, spreadsheet, image, audio, or video parser. Source plans are shown before reading,
+hidden/build/dependency directories are excluded, symlink escapes are rejected, and limits start at
+50 files, 20 MiB per file, 50 MiB total source bytes, and 200,000 extracted characters.
+
+Samples and profile destinations always require review. The extension persists reviewed Markdown
+profile prose, examples, and source references; it does not keep a raw sample archive. Existing
+frontmatter such as `model:` is preserved where practical and model selection remains metadata-only.
+Raw working samples and extension-owned temporary paths are released on normal save, cancel,
+failure, replacement, and session shutdown. This does not promise cleanup of Pi transcripts,
+provider retention, host-created exports, user originals, or forced process termination.
 
 ## Service
 
