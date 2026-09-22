@@ -1,0 +1,10 @@
+node_modules
+out
+dist
+coverage
+bun.lock
+*.tgz
+.cache
+.eslintcache
+*.tsbuildinfo
+docs/ideation/**
