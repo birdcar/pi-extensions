@@ -107,6 +107,7 @@ export function validateWorkspaceManifests(
     }
 
     validatePublicDependencies(manifest, errors);
+    validatePackageDependencyPolicy(manifest, errors);
     validateExports(manifest, rootDir, errors);
     validateLicenseCopy(manifest, rootDir, errors);
     validatePackageReadme(manifest, rootDir, errors);
@@ -177,11 +178,29 @@ function validatePublicDependencies(manifest: WorkspaceManifest, errors: string[
   }
 }
 
+function validatePackageDependencyPolicy(manifest: WorkspaceManifest, errors: string[]): void {
+  const name = stringValue(manifest.data.name);
+  if (name !== "@birdcar/pi-services") return;
+  for (const field of ["dependencies", "optionalDependencies", "peerDependencies"] as const) {
+    const deps = objectValue(manifest.data[field]);
+    if (!deps) continue;
+    for (const depName of Object.keys(deps)) {
+      if (depName.startsWith("@earendil-works/")) {
+        errors.push(`${manifest.path}: pi-services must not depend on Pi package ${depName}`);
+      }
+    }
+  }
+}
+
 function validateExports(manifest: WorkspaceManifest, rootDir: string, errors: string[]): void {
   const exportsField = objectValue(manifest.data.exports);
   if (!exportsField) {
     errors.push(`${manifest.path}: public package must declare exports`);
     return;
+  }
+
+  if (stringValue(manifest.data.name) === "@birdcar/pi-write-for" && !exportsField["./contract"]) {
+    errors.push(`${manifest.path}: pi-write-for must export ./contract`);
   }
 
   for (const [key, value] of Object.entries(exportsField)) {

@@ -1,4 +1,7 @@
 import { CONFIG_DIR_NAME, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { registerWriteForCommands } from "./commands.js";
+import { registerWriteForEvents } from "./events.js";
+import { registerWriteForService } from "./service.js";
 export type {
   DraftRequest,
   RewriteEventRequest,
@@ -16,8 +19,20 @@ export {
 
 export interface WriteForExtensionState {
   configDirectoryName: string;
+  dispose(): void;
 }
 
-export default function writeForExtension(_pi: ExtensionAPI): WriteForExtensionState {
-  return { configDirectoryName: CONFIG_DIR_NAME };
+export default function writeForExtension(pi: ExtensionAPI): WriteForExtensionState {
+  const service = registerWriteForService(pi);
+  registerWriteForCommands(pi);
+  const unsubscribeEvents = registerWriteForEvents(pi);
+  let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    unsubscribeEvents();
+    void service.dispose();
+  };
+  pi.on("session_shutdown", dispose);
+  return { configDirectoryName: CONFIG_DIR_NAME, dispose };
 }

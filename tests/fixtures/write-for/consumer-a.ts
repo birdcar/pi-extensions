@@ -1,4 +1,4 @@
-import type { ServiceContract } from "@birdcar/pi-services";
+import { discoverService, type EventBus, type ServiceContract } from "@birdcar/pi-services";
 import {
   writeForContract,
   type DraftRequest,
@@ -7,7 +7,9 @@ import {
 
 export const draftContract: ServiceContract<WriteForApi> = writeForContract;
 
-export async function draftFor(api: WriteForApi, subject: string): Promise<string> {
+export async function draftFor(events: EventBus, subject: string): Promise<string> {
+  const api = discoverService(events, writeForContract);
+  if (!api) return "write-for unavailable";
   const request: DraftRequest = { channel: "email", register: "professional", subject };
   return (await api.draft(request)).text;
 }

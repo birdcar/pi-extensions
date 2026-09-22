@@ -4,10 +4,10 @@ import { describe, expect, test } from "bun:test";
 
 const fixtureDir = join(process.cwd(), "packages", "boundary-fixture", "src");
 
-function runEslint(source: string) {
+function runEslint(source: string, fileName = "index.ts") {
   rmSync(join(process.cwd(), "packages", "boundary-fixture"), { recursive: true, force: true });
   mkdirSync(fixtureDir, { recursive: true });
-  const file = join(fixtureDir, "index.ts");
+  const file = join(fixtureDir, fileName);
   writeFileSync(file, source);
   const result = Bun.spawnSync({
     cmd: ["bun", "eslint", file, "--no-ignore"],
@@ -24,6 +24,14 @@ function expectBunViolation(source: string, expected: string) {
   const result = runEslint(source);
   expect(result.exitCode).not.toBe(0);
   expect(result.output).toContain(expected);
+}
+
+function expectContractViolation(source: string) {
+  const result = runEslint(source, "contract.ts");
+  expect(result.exitCode).not.toBe(0);
+  expect(result.output).toContain(
+    "Pure contract modules must not import runtime, Pi, filesystem, or provider modules",
+  );
 }
 
 describe("runtime boundary linting", () => {
@@ -77,6 +85,23 @@ describe("runtime boundary linting", () => {
       expectBunViolation(
         'export const value = import("bun:sqlite");\n',
         "Production packages must not import or re-export Bun modules",
+      );
+    } finally {
+      rmSync(join(process.cwd(), "packages", "boundary-fixture"), { recursive: true, force: true });
+    }
+  });
+
+  test("pure contract modules reject runtime, Pi, filesystem, and provider imports", () => {
+    try {
+      expectContractViolation(
+        'import { readFileSync } from "node:fs";\nexport { readFileSync };\n',
+      );
+      expectContractViolation(
+        'import type { Extension } from "@earendil-works/pi-coding-agent";\nexport type { Extension };\n',
+      );
+      expectContractViolation('export { value } from "./index.js";\n');
+      expectContractViolation(
+        'import { provider } from "./model-provider.js";\nexport { provider };\n',
       );
     } finally {
       rmSync(join(process.cwd(), "packages", "boundary-fixture"), { recursive: true, force: true });

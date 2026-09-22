@@ -54,11 +54,24 @@ async function fixtureRoot(manifests: WorkspaceManifest[]): Promise<string> {
       mkdirSync(join(packageDir, "dist"), { recursive: true });
       writeFileSync(join(packageDir, "dist/index.js"), "export {};\n");
       writeFileSync(join(packageDir, "dist/index.d.ts"), "export {};\n");
+      writeFileSync(join(packageDir, "dist/contract.js"), "export {};\n");
+      writeFileSync(join(packageDir, "dist/contract.d.ts"), "export {};\n");
       writeFileSync(join(packageDir, "LICENSE"), "license\n");
       writeFileSync(join(packageDir, "README.md"), `# ${manifest.data.name}\n`);
     }
   }
   return dir;
+}
+
+function writerPackage(): WorkspaceManifest {
+  const pkg = publicPackage("@birdcar/pi-write-for");
+  pkg.data.exports = {
+    ".": { import: "./dist/index.js", types: "./dist/index.d.ts" },
+    "./contract": { import: "./dist/contract.js", types: "./dist/contract.d.ts" },
+  };
+  pkg.data.dependencies = { "@birdcar/pi-services": "^0.1.0", yaml: "2.8.1" };
+  pkg.data.peerDependencies = { "@earendil-works/pi-coding-agent": "*" };
+  return pkg;
 }
 
 describe("workspace manifest validation", () => {
@@ -127,11 +140,29 @@ describe("workspace manifest validation", () => {
     );
   });
 
-  test("accepts an explicitly valid second public package", async () => {
+  test("accepts writer-style contract exports and an allowed Pi peer dependency", async () => {
     const service = publicPackage("@birdcar/pi-services");
-    const extra = publicPackage("@birdcar/pi-extra");
-    const root = await fixtureRoot([rootManifest, service, extra]);
-    const result = validateWorkspaceManifests([rootManifest, service, extra], root);
+    const writer = writerPackage();
+    const root = await fixtureRoot([rootManifest, service, writer]);
+    const result = validateWorkspaceManifests([rootManifest, service, writer], root);
     expect(result.errors).toEqual([]);
+  });
+
+  test("rejects a writer package that omits the contract subpath export", async () => {
+    const writer = writerPackage();
+    writer.data.exports = { ".": { import: "./dist/index.js", types: "./dist/index.d.ts" } };
+    const root = await fixtureRoot([rootManifest, writer]);
+    const result = validateWorkspaceManifests([rootManifest, writer], root);
+    expect(result.errors.join("\n")).toContain("pi-write-for must export ./contract");
+  });
+
+  test("rejects Pi dependencies on pi-services", async () => {
+    const service = publicPackage("@birdcar/pi-services");
+    service.data.dependencies = { "@earendil-works/pi-coding-agent": "0.87.0" };
+    const root = await fixtureRoot([rootManifest, service]);
+    const result = validateWorkspaceManifests([rootManifest, service], root);
+    expect(result.errors.join("\n")).toContain(
+      "pi-services must not depend on Pi package @earendil-works/pi-coding-agent",
+    );
   });
 });

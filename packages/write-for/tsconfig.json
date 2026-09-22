@@ -3,7 +3,11 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "declaration": true
+    "declaration": true,
+    "paths": {
+      "@birdcar/pi-services": ["packages/services/dist/index.d.ts"],
+      "@birdcar/pi-write-for/contract": ["packages/write-for/src/contract.ts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }
