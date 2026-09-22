@@ -1,0 +1,61 @@
+{
+  "projectName": "Pi Extension Monorepo Foundation",
+  "slug": "2026-09-21-pi-extension-monorepo",
+  "date": "2026-09-22",
+  "branch": "ideation/2026-09-21-pi-extension-monorepo",
+  "baseBranch": "main",
+  "strict": true,
+  "summary": {
+    "completed": [
+      "Portable workspace foundation",
+      "Service discovery and Pi lifecycle proof"
+    ],
+    "noops": [],
+    "failed": [
+      "Independent releases and contributor handoff"
+    ],
+    "skipped": [],
+    "results": [
+      {
+        "title": "Portable workspace foundation",
+        "result": "PASS",
+        "reviewStatus": "passed",
+        "commitHash": "21a202aa42256cf9786b1071942b5a0a8b7737e9",
+        "summary": "Implemented the portable Bun workspace foundation with strict NodeNext production settings, the @birdcar/pi-services package shell, workspace validation, lint/runtime boundary checks, and contributor guidance. All required validation commands passed. — Cycle 2 addresses the prior blocking inner-loop issue by building the package in the workspace test setup, and the prior medium findings around maps, tarball LICENSE inspection, and semver range parsing are also resolved. The implementation now conforms to the Phase 1 spec with no remaining critical or high findings and is ready to commit.",
+        "findings": [],
+        "warnings": [],
+        "reviewCycles": 2
+      },
+      {
+        "title": "Service discovery and Pi lifecycle proof",
+        "result": "PASS",
+        "reviewStatus": "passed",
+        "commitHash": "56b6e75ff235fe1596f3eef1d2d92cec304924d0",
+        "summary": "Implemented the @birdcar/pi-services discovery/provider API with structural errors, lifecycle disposal guards, private fixtures, unit/integration/package verification, and normative service-discovery documentation. — The prior blocking issues appear addressed: the provider now uses a null-prototype guarded API, package checking exercises an independent helper copy, and the Pi harness uses public runtime reload/new-session APIs. Remaining issues are non-blocking spec cleanup around artifact handoff metadata and an unexpected Prettier ignore change; implementation is ready to commit after those are considered.",
+        "findings": [
+          "medium/spec-deviation scripts/check-package.ts:96 — The artifact checker only logs the tarball basename and then deletes the temp directory, but the spec requires exposing validated tarball path/metadata for Phase 3 to publish the same checked artifact → Emit durable metadata and/or copy the verified tarball to a stable ignored location before cleanup",
+          "low/spec-deviation .prettierignore:11 — Adds docs/ideation/** to Prettier ignores even though .prettierignore is not listed in the Phase 2 file changes and this reduces formatting coverage for specs → Remove this unrelated ignore or update the spec if intentionally changing ideation-doc formatting policy"
+        ],
+        "warnings": [],
+        "reviewCycles": 2
+      },
+      {
+        "title": "Independent releases and contributor handoff",
+        "result": "FAIL",
+        "reviewStatus": "failed",
+        "commitHash": null,
+        "summary": "Review FAILED after 3 cycle(s) with 3 blocking finding(s). Headless runs do not commit at the cycle cap; changes left unstaged.",
+        "findings": [
+          "high/spec-deviation .github/workflows/release.yml:128 — Exact-tag recovery accepts any ref named like pi-services-v* and only peels \"$RELEASE_TAG^{commit}\", so a branch or ambiguous ref can satisfy recovery without proving refs/tags/<tag> exists or that github.ref is the dispatched tag as required → Verify refs/tags/$RELEASE_TAG explicitly, compare github.ref/GITHUB_SHA to the peeled tag commit, and add a workflow negative control for non-tag recovery refs.",
+          "high/spec-deviation .github/workflows/ci.yml:42 — The Node 24 Linux and both macOS matrix entries run only check:package, but the spec requires Node/Pi plus packed-artifact smoke checks on Linux Node 24 and macOS for both supported Node lines → Run the Pi lifecycle smoke alongside check:package in those matrix entries or add an equivalent dedicated smoke command and assert it in tests.",
+          "high/testing tests/release/manifest.test.ts:135 — Release Please fixture coverage exercises post-1.0 fix behavior but omits the spec-required post-1.0 feat-minor and breaking-major cases → Add upstream Manifest fixtures/assertions for post-1.0 feat and breaking conventional commits.",
+          "medium/logic .github/workflows/ci.yml:27 — The PR title conventional-commit gate rejects valid breaking-change titles such as feat!: ... or feat(scope)!: ..., blocking the documented release path for breaking changes → Update the pattern to accept conventional breaking-change syntax and add a negative/positive workflow assertion."
+        ],
+        "warnings": [],
+        "reviewCycles": 3
+      }
+    ]
+  },
+  "verify": null,
+  "notesFiles": []
+}
