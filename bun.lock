@@ -23,6 +23,17 @@
       "name": "@birdcar/pi-services",
       "version": "0.1.0",
     },
+    "packages/write-for": {
+      "name": "@birdcar/pi-write-for",
+      "version": "0.1.0",
+      "dependencies": {
+        "@birdcar/pi-services": "^0.1.0",
+        "yaml": "2.8.1",
+      },
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+      },
+    },
   },
   "packages": {
     "@anthropic-ai/sdk": ["@anthropic-ai/sdk@0.124.0", "https://socket-firewall.workos.dev/@anthropic-ai/sdk/-/sdk-0.124.0.tgz", { "dependencies": { "json-schema-to-ts": "^3.1.1", "standardwebhooks": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" }, "optionalPeers": ["zod"], "bin": { "anthropic-ai-sdk": "bin/cli" } }, "sha512-cN5O8i9UVxHeOQAzj/XjshWXG8KiibJDw9OGpH2Z/eR3n/RBxdoLxDJOcfqAJWvjaMDFfHTBADU04hWRJVkDyA=="],
@@ -72,6 +83,8 @@
     "@babel/runtime": ["@babel/runtime@7.29.7", "https://socket-firewall.workos.dev/@babel/runtime/-/runtime-7.29.7.tgz", {}, "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="],
 
     "@birdcar/pi-services": ["@birdcar/pi-services@workspace:packages/services"],
+
+    "@birdcar/pi-write-for": ["@birdcar/pi-write-for@workspace:packages/write-for"],
 
     "@conventional-commits/parser": ["@conventional-commits/parser@0.4.1", "https://socket-firewall.workos.dev/@conventional-commits/parser/-/parser-0.4.1.tgz", { "dependencies": { "unist-util-visit": "^2.0.3", "unist-util-visit-parents": "^3.1.1" } }, "sha512-H2ZmUVt6q+KBccXfMBhbBF14NlANeqHTXL4qCL6QGbMzrc4HDXyzWuxPxPNbz71f/5UkR5DrycP5VO9u7crahg=="],
 

@@ -57,7 +57,12 @@ async function upstreamManifestReleases(
         pkg.path,
         {
           releaseType: "node",
-          component: pkg.path === "packages/services" ? "pi-services" : pkg.path.split("/").at(-1),
+          component:
+            pkg.path === "packages/services"
+              ? "pi-services"
+              : pkg.path === "packages/write-for"
+                ? "pi-write-for"
+                : pkg.path.split("/").at(-1),
           packageName: `@fixture/${pkg.path.split("/").at(-1)}`,
           initialVersion: "0.1.0",
           tagSeparator: "-",
@@ -107,29 +112,46 @@ async function upstreamManifestReleases(
 }
 
 describe("release manifest configuration", () => {
-  test("configures one independent public package without workspace cascade plugins", () => {
+  test("configures independent public packages without workspace cascade plugins", () => {
     expect(releasePlease.version).toBe("17.1.1");
-    expect(Object.keys(config.packages)).toEqual(["packages/services"]);
+    expect(Object.keys(config.packages)).toEqual(["packages/services", "packages/write-for"]);
     expect(config["separate-pull-requests"]).toBe(true);
     expect(config["tag-separator"]).toBe("-");
     expect(JSON.stringify(config)).not.toContain("node-workspace");
     expect(JSON.stringify(config)).not.toContain("linked-versions");
   });
 
-  test("bootstraps pi-services for the first 0.1.0 release", async () => {
+  test("bootstraps packages for first 0.1.0 releases", async () => {
     const service = config.packages["packages/services"];
-    expect(service).toBeTruthy();
-    expect(service?.component).toBe("pi-services");
-    expect(service?.["package-name"]).toBe("@birdcar/pi-services");
-    expect(service?.["release-type"]).toBe("node");
-    expect(service?.["initial-version"]).toBe("0.1.0");
+    const writer = config.packages["packages/write-for"];
+    expect(service).toMatchObject({
+      component: "pi-services",
+      "package-name": "@birdcar/pi-services",
+      "release-type": "node",
+      "initial-version": "0.1.0",
+    });
+    expect(writer).toMatchObject({
+      component: "pi-write-for",
+      "package-name": "@birdcar/pi-write-for",
+      "release-type": "node",
+      "initial-version": "0.1.0",
+    });
     expect(manifest).toEqual({});
     expect(
       await upstreamManifestReleases(
-        [{ path: "packages/services", packageVersion: "0.0.0" }],
-        [{ message: "feat: publish helper", files: ["packages/services/src/index.ts"] }],
+        [
+          { path: "packages/services", packageVersion: "0.0.0" },
+          { path: "packages/write-for", packageVersion: "0.0.0" },
+        ],
+        [
+          { message: "feat: publish helper", files: ["packages/services/src/index.ts"] },
+          { message: "feat: publish writer", files: ["packages/write-for/src/index.ts"] },
+        ],
       ),
-    ).toEqual([{ path: "packages/services", version: "0.1.0", tag: "pi-services-v0.1.0" }]);
+    ).toEqual([
+      { path: "packages/services", version: "0.1.0", tag: "pi-services-v0.1.0" },
+      { path: "packages/write-for", version: "0.1.0", tag: "pi-write-for-v0.1.0" },
+    ]);
   });
 
   test("uses path-scoped independent releases and excludes private or root-only changes", async () => {

@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export interface PackageArtifact {
@@ -18,6 +18,7 @@ export interface PackageArtifactOptions {
   rootDir?: string;
   packagePath?: string;
   keepTemp?: boolean;
+  dependencyTarballs?: string[];
 }
 
 function run(command: string, args: string[], cwd: string): string {
@@ -67,7 +68,11 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
 
     run("npm", ["init", "-y"], temp);
     const tarball = join(temp, packed.filename);
-    run("npm", ["install", tarball, "--ignore-scripts"], temp);
+    run(
+      "npm",
+      ["install", ...(options.dependencyTarballs ?? []), tarball, "--ignore-scripts"],
+      temp,
+    );
     const installedPackageDir = join(temp, "node_modules", packed.name);
     const manifest = JSON.parse(
       readFileSync(join(installedPackageDir, "package.json"), "utf8"),
@@ -88,8 +93,8 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
         if (version.startsWith("workspace:") || version.startsWith("file:")) {
           throw new Error(`${field} ${name} uses non-publishable ${version}`);
         }
-        if (name.startsWith("@earendil-works/"))
-          throw new Error("helper must not depend on Pi packages");
+        if (packed.name === "@birdcar/pi-services" && name.startsWith("@earendil-works/"))
+          throw new Error("services helper must not depend on Pi packages");
       }
     }
 
@@ -161,6 +166,16 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  const artifact = validatePackageArtifact();
-  console.log(`package artifact verified: ${basename(artifact.tarball)}`);
+  const services = validatePackageArtifact({ keepTemp: true });
+  try {
+    const writer = validatePackageArtifact({
+      packagePath: "packages/write-for",
+      dependencyTarballs: [services.tarball],
+    });
+    console.log(
+      `package artifacts verified: ${basename(services.tarball)}, ${basename(writer.tarball)}`,
+    );
+  } finally {
+    rmSync(dirname(services.tarball), { recursive: true, force: true });
+  }
 }

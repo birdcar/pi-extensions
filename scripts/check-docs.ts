@@ -15,6 +15,7 @@ const maintainedDocs = [
   "docs/service-discovery.md",
   "docs/releasing.md",
   "packages/services/README.md",
+  "packages/write-for/README.md",
 ];
 
 function lineFor(text: string, index: number): number {
@@ -44,7 +45,9 @@ function extractExampleFiles(rootDir: string, errors: string[]): string[] {
   const examples = new Set<string>();
   for (const file of maintainedDocs) {
     const text = readFileSync(join(rootDir, file), "utf8");
-    for (const match of text.matchAll(/`([^`]*tests\/fixtures\/services\/[^`]+\.ts)`/g)) {
+    for (const match of text.matchAll(
+      /`([^`]*tests\/fixtures\/(?:services|write-for)\/[^`]+\.ts)`/g,
+    )) {
       const target = match[1];
       if (!target) continue;
       const resolved = resolve(dirname(join(rootDir, file)), target);

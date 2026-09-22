@@ -31,6 +31,9 @@ jobs:
       services_version: ${{ steps.release.outputs['packages/services--version'] }}
       services_tag: ${{ steps.release.outputs['packages/services--tag_name'] }}
       services_sha: ${{ steps.release.outputs['packages/services--sha'] }}
+      write_for_version: ${{ steps.release.outputs['packages/write-for--version'] }}
+      write_for_tag: ${{ steps.release.outputs['packages/write-for--tag_name'] }}
+      write_for_sha: ${{ steps.release.outputs['packages/write-for--sha'] }}
     steps:
       - name: Create GitHub App token
         id: app-token
@@ -122,12 +125,15 @@ jobs:
           SERVICES_VERSION: ${{ needs.release-management.outputs.services_version }}
           SERVICES_TAG: ${{ needs.release-management.outputs.services_tag }}
           SERVICES_SHA: ${{ needs.release-management.outputs.services_sha }}
+          WRITE_FOR_VERSION: ${{ needs.release-management.outputs.write_for_version }}
+          WRITE_FOR_TAG: ${{ needs.release-management.outputs.write_for_tag }}
+          WRITE_FOR_SHA: ${{ needs.release-management.outputs.write_for_sha }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
         run: |
           set -euo pipefail
           if [ -n "${RELEASE_TAG:-}" ]; then
-            case "$RELEASE_TAG" in pi-services-v*) path="packages/services"; version="${RELEASE_TAG#pi-services-v}" ;; *) echo "unknown release tag" >&2; exit 1 ;; esac
+            case "$RELEASE_TAG" in pi-services-v*) path="packages/services"; version="${RELEASE_TAG#pi-services-v}" ;; pi-write-for-v*) path="packages/write-for"; version="${RELEASE_TAG#pi-write-for-v}" ;; *) echo "unknown release tag" >&2; exit 1 ;; esac
             git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"
             sha="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
             test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG"
@@ -135,7 +141,7 @@ jobs:
             test "$sha" = "$(git rev-parse HEAD)"
             releases="$(jq -nc --arg path "$path" --arg version "$version" --arg tag "$RELEASE_TAG" --arg sha "$sha" '[{path: $path, version: $version, tag: $tag, sha: $sha}]')"
           else
-            metadata="$(jq -nc --arg version "$SERVICES_VERSION" --arg tag "$SERVICES_TAG" --arg sha "$SERVICES_SHA" '{"packages/services": {version: $version, tag: $tag, sha: $sha}}')"
+            metadata="$(jq -nc --arg services_version "$SERVICES_VERSION" --arg services_tag "$SERVICES_TAG" --arg services_sha "$SERVICES_SHA" --arg writer_version "$WRITE_FOR_VERSION" --arg writer_tag "$WRITE_FOR_TAG" --arg writer_sha "$WRITE_FOR_SHA" '{"packages/services": {version: $services_version, tag: $services_tag, sha: $services_sha}, "packages/write-for": {version: $writer_version, tag: $writer_tag, sha: $writer_sha}}')"
             releases="$(bun scripts/release.ts select-releases "$PATHS_RELEASED" "$metadata")"
             releases="$(bun scripts/release.ts validate-releases "$releases")"
           fi

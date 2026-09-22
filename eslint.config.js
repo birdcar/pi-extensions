@@ -3,6 +3,8 @@ import tseslint from "typescript-eslint";
 
 const bunImportMessage = "Production packages must not import or re-export Bun modules.";
 const bunGlobalMessage = "Production packages must not use the Bun global.";
+const pureContractMessage =
+  "Pure contract modules must not import runtime, Pi, filesystem, or provider modules.";
 
 export default tseslint.config(
   {
@@ -28,7 +30,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ["packages/*/src/**/*.ts", "tests/pi/**/*.ts", "tests/fixtures/services/**/*.ts"],
+    files: [
+      "packages/*/src/**/*.ts",
+      "tests/pi/**/*.ts",
+      "tests/fixtures/services/**/*.ts",
+      "tests/fixtures/write-for/**/*.ts",
+    ],
     rules: {
       "no-restricted-globals": ["error", { name: "Bun", message: bunGlobalMessage }],
       "no-restricted-imports": [
@@ -51,6 +58,36 @@ export default tseslint.config(
         {
           selector: "CallExpression[callee.name='require'] > Literal[value=/^bun(:.*)?$/]",
           message: bunImportMessage,
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/*/src/contract.ts", "packages/*/src/contracts.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            { name: "bun", message: bunImportMessage },
+            { name: "bun:test", message: bunImportMessage },
+            { name: "bun:sqlite", message: bunImportMessage },
+            { name: "node:fs", message: pureContractMessage },
+            { name: "node:fs/promises", message: pureContractMessage },
+            { name: "@earendil-works/pi-coding-agent", message: pureContractMessage },
+          ],
+          patterns: [
+            { group: ["bun", "bun:*"], message: bunImportMessage },
+            { group: ["node:fs/*"], message: pureContractMessage },
+            {
+              group: ["@earendil-works/pi-*", "@earendil-works/pi-*/*"],
+              message: pureContractMessage,
+            },
+            {
+              group: ["./index.js", "./config.js", "./*provider*.js"],
+              message: pureContractMessage,
+            },
+          ],
         },
       ],
     },

@@ -11,6 +11,13 @@
       "release-type": "node",
       "initial-version": "0.1.0",
       "changelog-path": "CHANGELOG.md"
+    },
+    "packages/write-for": {
+      "component": "pi-write-for",
+      "package-name": "@birdcar/pi-write-for",
+      "release-type": "node",
+      "initial-version": "0.1.0",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }

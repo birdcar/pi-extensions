@@ -5,6 +5,11 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "moduleDetection": "force",
+    "baseUrl": ".",
+    "paths": {
+      "@birdcar/pi-services": ["packages/services/src/index.ts"],
+      "@birdcar/pi-write-for/contract": ["packages/write-for/src/contract.ts"]
+    },
     "types": ["node"],
     "strict": true,
     "verbatimModuleSyntax": true,

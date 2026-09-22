@@ -79,6 +79,9 @@ function assertReleasePublicationWiring(candidate: Workflow): void {
   expect(releaseManagement?.outputs?.services_version).toContain("packages/services--version");
   expect(releaseManagement?.outputs?.services_tag).toContain("packages/services--tag_name");
   expect(releaseManagement?.outputs?.services_sha).toContain("packages/services--sha");
+  expect(releaseManagement?.outputs?.write_for_version).toContain("packages/write-for--version");
+  expect(releaseManagement?.outputs?.write_for_tag).toContain("packages/write-for--tag_name");
+  expect(releaseManagement?.outputs?.write_for_sha).toContain("packages/write-for--sha");
 
   const checkout = publish?.steps?.find((candidateStep) =>
     candidateStep.uses?.startsWith("actions/checkout"),
@@ -100,6 +103,9 @@ function assertReleasePublicationWiring(candidate: Workflow): void {
   expect(JSON.stringify(validate.env)).toContain("services_version");
   expect(JSON.stringify(validate.env)).toContain("services_tag");
   expect(JSON.stringify(validate.env)).toContain("services_sha");
+  expect(JSON.stringify(validate.env)).toContain("write_for_version");
+  expect(JSON.stringify(validate.env)).toContain("write_for_tag");
+  expect(JSON.stringify(validate.env)).toContain("write_for_sha");
   expect(validate.env?.GITHUB_REF).toBe("${{ github.ref }}");
   assertNoNpmTokenAuth(candidate);
   assertSupportedNpm(candidate);
@@ -250,6 +256,7 @@ describe("workflow policy", () => {
       "typecheck",
       "lint",
       "test:services",
+      "test:write-for",
       "test:execution",
       "test:pi",
       "check:package",
