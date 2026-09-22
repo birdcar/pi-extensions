@@ -1,0 +1,410 @@
+{
+  "projectName": "Pi Write For",
+  "slug": "2026-09-22-pi-write-for",
+  "date": "2026-09-22",
+  "status": "Approved",
+  "approvalMode": "express",
+  "branch": "ideation/2026-09-22-pi-write-for",
+  "approvedOn": "2026-09-22",
+  "approvedBy": "User",
+  "supersedes": null,
+  "gates": {
+    "dimensions": [
+      {
+        "key": "problem",
+        "label": "Problem Clarity",
+        "status": "ready",
+        "evidence": "The carried brainstorm identifies the user's recurring problem: each Pi application integration otherwise has to duplicate bat-kol voice resolution and drafting, while Claude-specific orchestration prevents independent extensions from reusing that behavior."
+      },
+      {
+        "key": "goals",
+        "label": "Goal Definition",
+        "status": "ready",
+        "evidence": "The interview fixes observable outcomes: independent consumers receive drafts, layered configuration determines models, local samples produce reviewed profiles, and the user accepts three held-out drafts across two registers."
+      },
+      {
+        "key": "criteria",
+        "label": "Success Criteria",
+        "status": "ready",
+        "evidence": "The user approved fixture-based behavioral, document extraction, lifecycle, and Node/npm checks plus a separate three-draft real-model voice review; each outcome below names its executable check or named human observation."
+      },
+      {
+        "key": "scope",
+        "label": "Scope Boundaries",
+        "status": "ready",
+        "evidence": "The interview explicitly includes native text-based PDF and DOCX parsing without OCR, required hybrid training/retraining, renamed configuration with manual migration, no retained raw corpus, and no production connector or live publication requirement."
+      },
+      {
+        "key": "consistency",
+        "label": "Consistency",
+        "status": "ready",
+        "evidence": "The user resolved rule precedence and execution authority: injected prose overrides user writing preferences, model choices remain configuration-owned, anti-slop rules are defaults, and host-tool collection is separated from configured-model distillation."
+      }
+    ]
+  },
+  "problem": [
+    "The user has an existing bat-kol Claude plugin that resolves Markdown writing style, register, and channel rules, trains voice profiles, and drafts destination-specific messages. Pi extensions integrating applications need the same behavior without importing another extension's runtime or reimplementing its voice configuration and drafting workflow.",
+    "A reusable writer must work for unknown third-party consumers, return drafts without taking over their interaction or sending messages, and let callers supply request-specific writing rules. The user also needs project-, register-, and channel-specific model choices that do not alter the main Pi conversation's model.",
+    "Voice learning is part of the product, not a setup prerequisite delegated to Claude. Users may have different MCP integrations and CLI tools or only a folder of their own writing. Training must discover usable sources interactively, support local text/Markdown/PDF/DOCX without external conversion tools, and produce reviewable Markdown profiles. This contract plans a new package in the current monorepo; the original bat-kol repository is reference material, not a runtime dependency."
+  ],
+  "goals": [
+    "Provide a side-effect-free public service contract that two independently authored fixture consumers can discover through pi-services and use for isolated drafting and rewriting without importing the provider entrypoint.",
+    "Resolve configuration and model selection deterministically across global and project scopes and style/register/channel layers, while applying caller writing rules at the highest prose priority and leaving the main session model unchanged.",
+    "Expose /write-for and, in the intended Full release, an explicit event request adapter that execute the same headless writing engine and return the same result and failure semantics.",
+    "Support training and retraining through a host-conversation interview and approved source collection followed by configured-model distillation and reviewed persistence; a local folder alone must be a complete training path, including text-based PDF and DOCX in Full scope.",
+    "Ship an installable portable Node/Pi package with automated config, engine, training, extraction, lifecycle, and artifact checks integrated into the repository's release and validation conventions, without requiring live application credentials or publishing during development.",
+    "Demonstrate learned voice with three held-out drafts across at least two registers that the user accepts for factual fidelity and voice without substantial tone rewriting."
+  ],
+  "successCriteria": [
+    {
+      "criterion": "The contract subpath imports without initializing a provider, host, registry, or event bus; validates the flat async API; and permits third-party TypeScript consumers to use only the contract and pi-services.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/contract.test.ts",
+        "expect": "Exits 0; positive consumer/type fixtures and negative malformed-contract cases pass, and contract import has no provider side effects."
+      }
+    },
+    {
+      "criterion": "Configuration uses PI_WRITE_FOR_CONFIG or the nearest trusted project .pi/write-for directory with per-file XDG pi-write-for fallback; invalid explicit roots fail, old bat-kol paths are ignored, and unrelated ancestor configurations are not cumulatively merged.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/config.test.ts",
+        "expect": "Exits 0 across explicit-root, nearest-project, global-only, missing-root, untrusted-project, and manual-migration fixtures."
+      }
+    },
+    {
+      "criterion": "Metadata inherits field-by-field and metadata-only overrides retain inherited prose, while nonempty project prose replaces its corresponding global body; model precedence is active Pi model, global style/register/channel, then selected local style/register/channel, with only explicit values overriding.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/config.test.ts packages/write-for/test/model.test.ts",
+        "expect": "Exits 0 for the complete precedence matrix, including a project style model beating a global channel model, a project channel beating its register, and legacy Markdown without frontmatter."
+      }
+    },
+    {
+      "criterion": "Draft and rewrite requests compose anti-slop defaults below style/register/channel prose and injected writing rules, keep source material distinct from instructions, reject model/provider overrides in request execution fields, and return text plus resolved channel/register/model and usage metadata without writing config or invoking delivery.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/engine.test.ts",
+        "expect": "Exits 0; captured model requests establish prompt precedence and data separation, controlled results establish return behavior, and write/delivery/session-model mutation spies remain untouched."
+      }
+    },
+    {
+      "criterion": "Configured model lookup and authentication failures, missing required voice profiles, and invalid requests are explicit failures rather than silent fallbacks or interactive prompts; configured provider-neutral calls use the host registry and never pi.setModel.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/model.test.ts packages/write-for/test/engine.test.ts",
+        "expect": "Exits 0; unavailable/unauthenticated selections, absent profiles, and invalid input fail predictably with no substitute model call and no UI interaction."
+      }
+    },
+    {
+      "criterion": "Concurrent consumers have isolated source/rule/model state, cancellation settles the affected request, and provider shutdown cancels in-flight work and invalidates retained APIs without hanging promises or leaking listeners.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/service.test.ts",
+        "expect": "Exits 0 with two independent consumers, overlapping requests, cancellation, shutdown, rediscovery, unavailable-provider, and stale-handle cases."
+      }
+    },
+    {
+      "criterion": "The /write-for command handles explicit topics, source rewrites, register selection, and omitted-topic current Pi session-branch context (not Git/VCS inspection); built-in Slack/email/Bluesky/GitHub channel defaults and arbitrary custom channel rules reach the common engine. Service calls never implicitly copy the main session transcript.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/entrypoints.test.ts",
+        "expect": "Exits 0; registered command handlers call the same engine with explicit context, an unknown fixture-app channel works with a trained register and supplied format rules, and headless requests receive no implicit session history."
+      }
+    },
+    {
+      "criterion": "Full scope: a namespaced rewrite-request event delegates to the same service execution path, settles its request-local completion callback with a result or error, forwards cancellation, and never broadcasts draft content on a shared result channel.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/events.test.ts",
+        "expect": "Exits 0 for successful and failed rewrites, malformed payloads, cancellation, shutdown cleanup, and independent concurrent request callbacks; service results do not depend on observational events."
+      }
+    },
+    {
+      "criterion": "Training and retraining start only through explicit training entrypoints, guide source selection/author/register/exclusions using host interaction, and can use arbitrary available tool metadata without a hard dependency on a named MCP connector, CLI, or question-tool extension.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/training-flow.test.ts",
+        "expect": "Exits 0 for local-only and unknown-host-tool fixtures, missing capabilities, user-declined collection, and no-UI mode; only approved sources enter distillation and headless drafting never starts an interview."
+      }
+    },
+    {
+      "criterion": "Folder ingestion accepts selected UTF-8 text and Markdown samples with reproducible ordering, explicit exclusions and limits, and per-file diagnostics; Full scope adds actual text-based PDF and DOCX extraction without system conversion binaries, rendering, macros, or fetching document-linked resources.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/sources.test.ts packages/write-for/test/documents.test.ts",
+        "expect": "Exits 0 using real small text/Markdown/PDF/DOCX fixtures with expected extracted passages; corrupt, encrypted, textless, unsupported, and excluded files are diagnosed, and an empty accepted corpus cannot be reported as successful training."
+      }
+    },
+    {
+      "criterion": "Training distills bounded accepted samples through the configured model for the target scope, falling back to the active model only when no override exists; analysis is separated from host collection and cannot modify model frontmatter or the main session model.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/training-model.test.ts",
+        "expect": "Exits 0 for first-time setup, style/register/channel scopes, multi-profile training, unavailable explicit selections, and generated attempts to change execution metadata."
+      }
+    },
+    {
+      "criterion": "Training proposes Markdown profile changes and saves only after explicit review/approval of the exact destinations and contents; retraining starts from existing profiles, preserves manual preferences and model metadata, surfaces conflicts, and rejects stale proposals before overwriting changed files.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/training-store.test.ts",
+        "expect": "Exits 0 for approve/edit/reject/cancel, global versus explicitly selected project destination, manual-rule preservation, model-frontmatter preservation, stale-file conflicts, and failed writes without false success reports."
+      }
+    },
+    {
+      "criterion": "The writer persists only approved profiles, illustrative excerpts, and source references, not a raw training corpus; extension-owned temporary samples are removed on success, failure, cancellation, and normal session shutdown, and original user files are never deleted.",
+      "check": {
+        "cmd": "bun test packages/write-for/test/retention.test.ts",
+        "expect": "Exits 0 for all managed cleanup paths, with positive persisted-profile checks and filesystem assertions proving source originals remain unchanged and raw copies are not saved in config."
+      }
+    },
+    {
+      "criterion": "The compiled extension loads in real Pi, supports service discovery independent of extension load order, and reestablishes service/command/tool state after reload and session replacement without retaining stale session context.",
+      "check": {
+        "cmd": "bun run test:pi",
+        "expect": "Exits 0 including new writer lifecycle cases against compiled package artifacts and existing services regression cases."
+      }
+    },
+    {
+      "criterion": "Packed services and writer artifacts install together in a clean npm consumer; Node ESM and NodeNext TypeScript can consume the public contract and the extension manifest points to shipped JavaScript and training resources, including working native extraction dependencies in Full scope.",
+      "check": {
+        "cmd": "bun run check:package",
+        "expect": "Exits 0 for both packages; the clean consumer exercises the writer contract and document extraction under Node without Bun or globally installed converter tools."
+      }
+    },
+    {
+      "criterion": "The monorepo's aggregate checks cover every new writer test plus existing boundaries, type checks, lint, docs, release routing, lockfile, publication, and lifecycle/artifact checks; adding the writer does not weaken the services helper's dependency rules.",
+      "check": {
+        "cmd": "bun run check",
+        "expect": "Exits 0; writer test files are explicitly included by the aggregate check and package/release tests cover both package identities with no live publication."
+      }
+    },
+    {
+      "criterion": "After training from a user-approved local corpus, the user accepts three held-out drafts across at least two registers for preservation of supplied facts and recognizable voice without substantial tone rewriting.",
+      "check": {
+        "judgment": "The user runs the installed training/drafting experience with a real configured model and samples they own, then reviews three new prompts not used as training examples. Each draft must preserve supplied facts and need no substantial voice/tone rewrite. The user records acceptance or specific failures; automated verification alone cannot certify this criterion."
+      }
+    }
+  ],
+  "scope": {
+    "mvp": [
+      {
+        "item": "A new @birdcar/pi-write-for package with a side-effect-free ./contract export, guarded async draft/rewrite service using @birdcar/pi-services, and independent consumer fixtures.",
+        "reason": "Unknown third-party extensions must compose without depending on the provider runtime or registering application identities."
+      },
+      {
+        "item": "Renamed Markdown configuration at .pi/write-for/, ${XDG_CONFIG_HOME:-~/.config}/pi-write-for/, or PI_WRITE_FOR_CONFIG; nearest-root selection, global per-file fallback, metadata-only inheritance, optional model frontmatter at style/register/channel scope, and manual migration only.",
+        "reason": "The user explicitly chose new names with manual migration and requires project/register/channel model control while retaining human-editable profiles."
+      },
+      {
+        "item": "A single headless draft/rewrite engine with explicit source/context, request-scoped injected prose, model/usage provenance, request cancellation, lifecycle cleanup, and deterministic error semantics. Injected prose wins over user writing preferences but cannot change execution configuration.",
+        "reason": "Callers need returned drafts and failures, not UI takeover, configuration mutation, or a second model-selection authority."
+      },
+      {
+        "item": "/write-for <channel> [topic], register selection and rewrite support; omitted topics use explicit current Pi session-branch text supplied by the command, preserving bat-kol's session-summary behavior without adding Git/VCS inspection. Include Slack/email/Bluesky/GitHub format defaults and arbitrary custom channels through saved Markdown or request format rules. Results are draft text, not delivery API payloads.",
+        "reason": "This preserves the interactive writing entrypoint while ensuring new application destinations do not require dedicated drafter implementations."
+      },
+      {
+        "item": "Required /train-voice and /retrain-voice entrypoints supporting style, register, channel, and full-profile scopes. The host conversation interviews and collects approved samples using actual available tools; isolated registry-backed calls distill using resolved models. Concrete writer-local tools/functions backed by Pi's built-in UI provide the interview and review, avoiding both a mandatory third-party question tool and a reusable interaction framework.",
+        "reason": "The user says the system is incomplete without adaptive training/retraining and explicitly selected the hybrid execution flow."
+      },
+      {
+        "item": "A complete local UTF-8 text/Markdown folder-training path, source/author/register/exclusion review, bounded ingestion with clear diagnostics, reviewed proposal persistence, retraining conflict handling, and no retained raw corpus. Default save target is global; project writes require explicit target selection and approval.",
+        "reason": "Users must be able to learn a voice without a connector, and source retention and destination changes must be deliberate."
+      },
+      {
+        "item": "Portable NodeNext ESM packaging, compiled Pi entrypoint and any shipped training resources, root-pinned dependencies, offline behavioral fixtures, real Pi lifecycle checks, npm artifact-consumer tests, writer-aware release routing, and maintained package usage documentation.",
+        "reason": "The requested extension must be installable by ordinary Node/Pi consumers and fit the existing monorepo's independent-package validation and release model."
+      },
+      {
+        "item": "The explicit human voice-quality acceptance checkpoint after implementation.",
+        "reason": "The user chose real-model voice review in addition to mechanical tests; passing CI alone is insufficient to declare the learned voice accepted."
+      }
+    ],
+    "full": [
+      {
+        "item": "Namespaced event request ingress that delegates to the existing async writer path, with request-local result/error completion and cancellation rather than a second event RPC subsystem.",
+        "reason": "Required for the user's intended complete release, but separable from the directly callable service and command core."
+      },
+      {
+        "item": "Built-in text-based PDF and DOCX extraction for local training, preserving useful paragraph/page boundaries and reporting corrupt/encrypted/textless inputs; use portable packaged JavaScript parsers with no mandatory system converters.",
+        "reason": "The user explicitly rejected text-only native ingestion and requires PDF/DOCX in the first complete release. This adds independently testable extraction and packaging work beyond the usable core."
+      }
+    ],
+    "stretch": [],
+    "outOfScope": [
+      {
+        "item": "Automatic sending, application delivery connectors, and delivery-specific API payloads inside the writer.",
+        "reason": "Callers own presentation, revisions, approval, and delivery; this service returns draft text."
+      },
+      {
+        "item": "Cross-process RPC or an external-application server.",
+        "reason": "pi-services is in-process discovery; an external bridge is a separate project."
+      },
+      {
+        "item": "Legacy bat-kol path fallback or an automatic importer.",
+        "reason": "The user selected new names with manual migration."
+      },
+      {
+        "item": "A fixed MCP/CLI connector catalog, bundled connector implementations, automatic installations, or background source monitoring.",
+        "reason": "Training discovers the user's actual tools on demand and must work from a local folder; a connector ecosystem is not required."
+      },
+      {
+        "item": "OCR, scanned-document recognition, legacy .doc conversion, native parsers for additional office formats, document rendering, and layout-faithful conversion.",
+        "reason": "The user fixed native scope at UTF-8 text/Markdown, text-based PDF, and DOCX with no OCR; the task is extracting writing samples, not reproducing documents."
+      },
+      {
+        "item": "Persisting raw training corpora or automatically changing profiles during ordinary drafting.",
+        "reason": "The user rejected retained raw copies; approved profiles/excerpts/source references are sufficient, and retraining is an explicit reviewed action."
+      },
+      {
+        "item": "Caller-supplied model selection, model-routing heuristics, automatic fallback chains, or provider credentials/endpoint definitions in writing frontmatter.",
+        "reason": "Model execution is user-configuration-owned and references providers already configured in Pi. Explicit failures must not silently change execution."
+      },
+      {
+        "item": "Reproducing Claude's channel-specific agent graph or building a general agent/tool execution framework.",
+        "reason": "One writing engine plus existing Pi host capabilities meet the stated composition and training goals."
+      },
+      {
+        "item": "Mandatory production application integration, live npm publication, enabling hosted release automation, or a benchmark/evaluation platform.",
+        "reason": "The user accepted independent consumer fixtures, existing repository verification, and a bounded human voice review as the completion boundary."
+      },
+      {
+        "item": "A guarantee that source samples never appear in Pi's own transcript, approved host-tool exports, or provider retention.",
+        "reason": "The no-raw-corpus promise concerns writer-managed persistence and normal cleanup; host sessions, external tools, and selected model providers retain their own data semantics."
+      }
+    ],
+    "future": [
+      "External application bridges and delivery integrations can independently consume the public writing contract.",
+      "Additional document formats or OCR require a separate scope decision rather than silent tool installation.",
+      "A larger held-out voice evaluation corpus can follow if the initial human review exposes quality issues that need systematic measurement."
+    ]
+  },
+  "decisions": [
+    {
+      "decision": "Extract a headless writing service with /write-for as an interactive consumer; callers receive drafts and own their interaction.",
+      "rejected": "Have the writing extension take over every caller's interactive approval/revision flow or support two handoff modes immediately.",
+      "reason": "The user selected Return a draft; a UI-independent result is the required composition boundary."
+    },
+    {
+      "decision": "Use the existing pi-services direct async API as the result-bearing interface and implement event ingress as a thin adapter.",
+      "rejected": "Build a separate event request/response execution system.",
+      "reason": "The existing discovery protocol already returns guarded APIs and normal promise results; duplicating execution semantics would create inconsistent failure and lifecycle behavior."
+    },
+    {
+      "decision": "Keep source material separate from injected writing rules; conflicting injected prose wins for that request, with no persistence.",
+      "rejected": "Always prioritize saved user writing preferences over caller instructions, or mutate profiles to apply caller rules.",
+      "reason": "The user explicitly requires integrations to override existing writing preferences where conflicts exist."
+    },
+    {
+      "decision": "Allow optional model frontmatter in style, register, and channel files, with scope-first precedence and channel over register over style within a scope.",
+      "rejected": "Limit selection to one project model or let a global channel preference defeat an explicit project-wide model.",
+      "reason": "The user requested register/channel overrides as well as project control; only explicit values override, and absent selections inherit the active Pi model."
+    },
+    {
+      "decision": "Resolve model metadata independently from prose, retaining inherited body text for metadata-only overrides.",
+      "rejected": "Replace the global writing body with an empty body when a project only changes its model.",
+      "reason": "This deliberate extension of bat-kol's file-level fallback avoids copying voice rules merely to choose a model."
+    },
+    {
+      "decision": "Configuration owns model selection, with explicit unavailable-model errors and request-local calls through the Pi registry.",
+      "rejected": "Let request parameters or injected prose select models, silently substitute models, or change the main session with pi.setModel.",
+      "reason": "The user selected Configuration wins; unknown integrations must respect the user's configured execution choices."
+    },
+    {
+      "decision": "Use write-for-specific configuration names with manual profile migration.",
+      "rejected": "Reuse .bat-kol/XDG bat-kol/BAT_KOL_CONFIG or provide a one-time importer.",
+      "reason": "The user explicitly selected New names, manual migration during ideation."
+    },
+    {
+      "decision": "Use hybrid training: main-session interview and approved source collection, then isolated configured-model distillation and reviewed saves.",
+      "rejected": "Perform all analysis with the main session model or build a self-contained wizard that cannot naturally reuse arbitrary host tools.",
+      "reason": "The user selected Hybrid training; Pi tool metadata is discoverable but isolated model calls do not automatically inherit installed tool execution."
+    },
+    {
+      "decision": "Make training and retraining required, capability-aware features with a complete local-folder path.",
+      "rejected": "Depend on Claude connectors, a fixed scraper list, or pre-trained profiles created elsewhere.",
+      "reason": "The user stated that training/retraining are necessary for the system to work and that source acquisition belongs in the interview."
+    },
+    {
+      "decision": "Persist approved profiles, illustrative excerpts, and provenance references only; clean writer-owned temporary samples during normal completion and teardown.",
+      "rejected": "Retain a second raw sample corpus or promise that Pi/provider history has no sample data.",
+      "reason": "The user selected No raw copies with the explicit caveat that Pi's own history remains governed by Pi."
+    },
+    {
+      "decision": "Treat anti-slop guidance as the lowest-priority writing defaults.",
+      "rejected": "Preserve bat-kol's non-overridable word/pattern bans or remove all built-in style guidance.",
+      "reason": "The user selected Overridable defaults so learned voice and caller requirements can win without affecting execution controls."
+    },
+    {
+      "decision": "Provide built-in PDF and DOCX extraction in the intended Full release, in addition to native text/Markdown.",
+      "rejected": "Require host tools or manual conversion for every rich document.",
+      "reason": "The user chose Built-in document parsing when asked what belongs in the first release."
+    },
+    {
+      "decision": "Extract text from text-based PDFs and DOCX without OCR or layout-faithful document reproduction.",
+      "rejected": "Include scanned-PDF OCR in the first release.",
+      "reason": "The user explicitly selected PDF + DOCX, no OCR; textless inputs must be diagnosed rather than silently used as empty samples."
+    },
+    {
+      "decision": "Verify mechanics offline and require a separate real-model, three-draft voice review across two registers.",
+      "rejected": "Rely only on mocked tests, build a larger evaluation platform now, or require a production application connector to prove completion.",
+      "reason": "The user selected Tests plus voice review and approved the concrete acceptance boundary. Human voice judgment is not replaced by a successful command-only verify run."
+    },
+    {
+      "decision": "Keep the original bat-kol source as prior art rather than a dependency, and implement one portable writer rather than dedicated channel agents.",
+      "rejected": "Port the Claude agent hierarchy and hardcoded connector assumptions into Pi.",
+      "reason": "The reusable unit is voice/configuration-driven writing, not the old orchestration mechanism."
+    },
+    {
+      "decision": "Phase spec paths were planned Draft outputs; all four are now generated after contract approval and passed the express quality gate. The user chose artifacts only plus a Git commit, not implementation execution.",
+      "rejected": "Treat the Draft contract's phase paths as already runnable artifacts or generate implementation specs before contract approval.",
+      "reason": "The hidden-dependency critic flagged absent specs. The ideation process intentionally generates specs after approval, so the contract now states that dependency and execution gate explicitly rather than implying the files already exist."
+    },
+    {
+      "decision": "Keep interview and review code private and concrete to the writer rather than building reusable UI infrastructure.",
+      "rejected": "Introduce a general structured-interview helper framework for the single voice-learning workflow.",
+      "reason": "The over-engineering critic correctly identified an ambiguous abstraction boundary; built-in Pi UI plus small local functions and tools are enough."
+    },
+    {
+      "decision": "Preserve bat-kol's omitted-topic session summary and four built-in format defaults as core command behavior, while explicitly excluding implicit Git/VCS inspection.",
+      "rejected": "Require explicit source/topic for every command or remove all built-in destination defaults from the core.",
+      "reason": "The scope critic read current-branch as VCS behavior; it means the current Pi session branch. The named format defaults and session-summary behavior are existing bat-kol capabilities, not a new integration system."
+    },
+    {
+      "decision": "Keep human voice acceptance outside the engine's executable phase list and report it separately from mechanical implementation completion.",
+      "rejected": "Dispatch a human-only checkpoint with no executable spec as an implementation phase.",
+      "reason": "The current autopilot path expects executable specPath entries. The named judgment criterion and final implementation spec's manual checklist retain the human gate without pretending the engine can certify voice quality."
+    },
+    {
+      "decision": "Add basic second-package workspace, artifact-rule scoping, and release-identity support when the package is introduced; finish end-to-end distribution proof in the final phase.",
+      "rejected": "Leave services-only package/release assertions unchanged until the final phase.",
+      "reason": "A new package must not make required intermediate workspace and release validation impossible. Final artifact-consumer and lifecycle proof still follows the implemented writer."
+    }
+  ],
+  "execution": {
+    "strategy": "Four sequential implementation phases; Full is the intended first-release target. All four post-approval specs have been generated and passed the express feedback-quality self-review. The user selected artifacts-only generation plus an artifact commit; no implementation is authorized by that run-mode choice. A later explicit execution request can use the recorded isolation branch. Human voice acceptance is a separate required judgment checkpoint after mechanical implementation, not a phase dispatched to the engine.",
+    "phases": [
+      {
+        "title": "Package, contract, and layered configuration",
+        "risk": "medium",
+        "blocking": true,
+        "specPath": "docs/ideation/2026-09-22-pi-write-for/spec-phase-1.md",
+        "notes": "After contract approval, generate this spec before execution. Create packages/write-for, compiled entrypoint scaffolding, pure contract subpath and validation, renamed roots, metadata/prose inheritance, channel/register defaults, and config/model-resolution fixtures. Define the contract and package dependency boundary without changing pi-services discovery. Add basic writer package/release identity and update services-only workspace/artifact/release assertions as needed so intermediate validation remains possible; the services helper keeps its no-Pi-dependency rule. Root pins and bun.lock stay synchronized."
+      },
+      {
+        "title": "Headless writing and composition entrypoints",
+        "risk": "medium",
+        "blocking": true,
+        "prereqs": ["Package, contract, and layered configuration"],
+        "specPath": "docs/ideation/2026-09-22-pi-write-for/spec-phase-2.md",
+        "notes": "After contract approval, generate this spec before execution. Implement registry-backed model calls, draft/rewrite prompt composition, service provider lifecycle, independent consumers, and /write-for. Full includes the thin event adapter. Produce engine/model/service/entrypoint/event tests; no UI or implicit transcript reads in the service."
+      },
+      {
+        "title": "Hybrid voice learning and document ingestion",
+        "risk": "high",
+        "blocking": true,
+        "prereqs": ["Headless writing and composition entrypoints"],
+        "specPath": "docs/ideation/2026-09-22-pi-write-for/spec-phase-3.md",
+        "notes": "After contract approval, generate this spec before execution. Implement host-guided training/retraining and concrete writer-local interview/proposal review tools and functions backed by Pi's built-in UI, not a reusable helper framework, accepted-source selection, isolated distillation, reviewed/stale-safe per-file persistence, and normal-path temporary cleanup. Full includes packaged text-based PDF/DOCX parsing (research found unpdf and mammoth viable Node candidates; pin selected versions and test actual binary fixtures). Produce sources/documents/training-flow/training-model/training-store/retention tests. No mandatory MCP connector, system converter, or raw corpus."
+      },
+      {
+        "title": "Portable distribution and acceptance integration",
+        "risk": "medium",
+        "blocking": true,
+        "prereqs": ["Hybrid voice learning and document ingestion"],
+        "specPath": "docs/ideation/2026-09-22-pi-write-for/spec-phase-4.md",
+        "notes": "After contract approval, generate this spec before execution. Extend test:pi to cover the compiled writer, check:package to install local services+writer tarballs and exercise Node contract/extraction consumers, and check to run every writer test. Complete and prove the basic second-package support introduced in phase 1, including package-aware release workflow outputs, tag recovery/routing, release metadata/tests and maintained docs; preserve OIDC-only publication and dependency-first release requirements. Run all repository validation locally, without enabling releases or publishing. Include the manual voice-review checklist in this spec: the user supplies a corpus and working model, then reviews three held-out drafts across two registers. Report voice acceptance pending until the user performs it; do not count it as an automatically passed build step."
+      }
+    ]
+  }
+}
