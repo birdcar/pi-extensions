@@ -17,8 +17,13 @@
     "test:pi": "bun run build && rm -rf .pi-tests && tsc -p tsconfig.pi-tests.json && mkdir -p .pi-tests/packages/services && cp -R packages/services/dist .pi-tests/packages/services/dist && cp packages/services/package.json .pi-tests/packages/services/package.json && node .pi-tests/tests/pi/lifecycle.js",
     "check:workspace": "bun scripts/check-workspace.ts",
     "check:package": "bun scripts/check-package.ts",
+    "check:docs": "bun scripts/check-docs.ts",
     "test:boundaries": "bun test tests/tooling/boundaries.test.ts",
-    "check": "bun run build && bun run test:services && bun run test:execution && bun run test:pi && bun run check:package && bun run check:workspace && bun run test:boundaries && bun run typecheck && bun run lint && bun test tests/tooling/workspace.test.ts"
+    "test:release": "bun test tests/release/manifest.test.ts",
+    "test:release-lock": "bun test tests/release/lockfile.test.ts",
+    "test:publish": "bun test tests/release/publish.test.ts",
+    "test:ci": "bun test tests/release/workflows.test.ts tests/tooling/workspace.test.ts tests/tooling/docs.test.ts",
+    "check": "bun run check:workspace && bun run test:boundaries && bun run typecheck && bun run lint && bun run test:services && bun run test:execution && bun run test:pi && bun run check:package && bun run test:release && bun run test:release-lock && bun run test:publish && bun run test:ci && bun run check:docs"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "0.87.0",
@@ -28,8 +33,10 @@
     "@types/semver": "7.7.1",
     "eslint": "9.36.0",
     "prettier": "3.6.2",
+    "release-please": "17.1.1",
     "semver": "7.7.2",
     "typescript": "5.9.2",
-    "typescript-eslint": "8.44.0"
+    "typescript-eslint": "8.44.0",
+    "yaml": "2.8.1"
   }
 }

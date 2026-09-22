@@ -23,7 +23,7 @@ function publicPackage(name = "@birdcar/pi-services"): WorkspaceManifest {
       license: "MIT",
       type: "module",
       exports: { ".": { import: "./dist/index.js", types: "./dist/index.d.ts" } },
-      files: ["dist", "LICENSE", "package.json"],
+      files: ["dist", "LICENSE", "README.md", "package.json"],
     },
   };
 }
@@ -31,6 +31,21 @@ function publicPackage(name = "@birdcar/pi-services"): WorkspaceManifest {
 async function fixtureRoot(manifests: WorkspaceManifest[]): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "pi-workspace-"));
   writeFileSync(join(dir, "LICENSE"), "license\n");
+  const releasePackages: Record<string, Record<string, string>> = {};
+  for (const manifest of manifests) {
+    if (manifest.path !== "package.json" && manifest.data.private !== true) {
+      releasePackages[manifest.path.replace(/\/package\.json$/, "")] = {
+        component: String(manifest.data.name).replace("@birdcar/", ""),
+        "package-name": String(manifest.data.name),
+        "release-type": "node",
+        "initial-version": String(manifest.data.version),
+      };
+    }
+  }
+  writeFileSync(
+    join(dir, "release-please-config.json"),
+    JSON.stringify({ "separate-pull-requests": true, packages: releasePackages }, null, 2),
+  );
   for (const manifest of manifests) {
     const packageDir = join(dir, manifest.path, "..");
     mkdirSync(packageDir, { recursive: true });
@@ -40,6 +55,7 @@ async function fixtureRoot(manifests: WorkspaceManifest[]): Promise<string> {
       writeFileSync(join(packageDir, "dist/index.js"), "export {};\n");
       writeFileSync(join(packageDir, "dist/index.d.ts"), "export {};\n");
       writeFileSync(join(packageDir, "LICENSE"), "license\n");
+      writeFileSync(join(packageDir, "README.md"), `# ${manifest.data.name}\n`);
     }
   }
   return dir;

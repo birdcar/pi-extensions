@@ -7,7 +7,10 @@ runner, but published runtime packages must work for ordinary Node/Pi consumers 
 
 - Use `bun install`, `bun run <script>`, and `bun test` for local development.
 - Keep dependencies pinned at the root and keep `bun.lock` in sync with `package.json`.
-- Run type checks, tests, lint, and workspace validation before requesting a commit.
+- Run type checks, tests, lint, workspace, release, package, and docs validation before requesting a
+  commit.
+- Read `docs/releasing.md` before changing release configuration, workflow files, package metadata,
+  or publication scripts.
 - Use the user's commit skill when asked to commit. Do not add an unrequested co-author trailer.
 - Store ideation artifacts in date-prefixed directories such as `docs/ideation/YYYY-MM-DD-<slug>/`.
 
@@ -39,5 +42,7 @@ bun run check:workspace
 bun run test:boundaries
 bun run typecheck
 bun run lint
+bun run check:package
+bun run check:docs
 bun run check
 ```

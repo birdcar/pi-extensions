@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { valid, validRange } from "semver";
 
@@ -81,6 +81,8 @@ export function validateWorkspaceManifests(
     }
   }
 
+  validateReleaseRegistration(manifests, rootDir, errors);
+
   for (const manifest of manifests.filter((item) => item.path !== "package.json")) {
     const isPrivate = manifest.data.private === true;
     if (isPrivate) continue;
@@ -98,7 +100,7 @@ export function validateWorkspaceManifests(
     if (!Array.isArray(files) || !files.every((value) => typeof value === "string")) {
       errors.push(`${manifest.path}: public package must declare a string files allowlist`);
     } else {
-      for (const required of ["dist", "LICENSE", "package.json"]) {
+      for (const required of ["dist", "LICENSE", "README.md", "package.json"]) {
         if (!files.includes(required))
           errors.push(`${manifest.path}: files allowlist must include ${required}`);
       }
@@ -107,10 +109,53 @@ export function validateWorkspaceManifests(
     validatePublicDependencies(manifest, errors);
     validateExports(manifest, rootDir, errors);
     validateLicenseCopy(manifest, rootDir, errors);
+    validatePackageReadme(manifest, rootDir, errors);
     validatePackedContents(manifest, rootDir, errors);
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+function readReleasePackagePaths(rootDir: string, errors: string[]): Set<string> {
+  const configPath = join(rootDir, "release-please-config.json");
+  if (!existsSync(configPath)) {
+    errors.push("release-please-config.json: release configuration is required");
+    return new Set();
+  }
+  const config = readJson(configPath);
+  const packages = objectValue(config.packages);
+  if (!packages) {
+    errors.push("release-please-config.json: packages map is required");
+    return new Set();
+  }
+  return new Set(Object.keys(packages).map((path) => `${path}/package.json`));
+}
+
+function validateReleaseRegistration(
+  manifests: WorkspaceManifest[],
+  rootDir: string,
+  errors: string[],
+): void {
+  const releasePaths = readReleasePackagePaths(rootDir, errors);
+  for (const path of releasePaths) {
+    const manifest = manifests.find((item) => item.path === path);
+    if (!manifest) {
+      errors.push(`release-please-config.json: configured package ${path} is missing`);
+      continue;
+    }
+    if (manifest.data.private === true) {
+      errors.push(`${path}: private package must not be registered for release`);
+    }
+  }
+
+  for (const manifest of manifests.filter((item) => item.path !== "package.json")) {
+    if (manifest.data.private === true) continue;
+    if (!releasePaths.has(manifest.path)) {
+      errors.push(
+        `${manifest.path}: public package must be registered in release-please-config.json`,
+      );
+    }
+  }
 }
 
 function validatePublicDependencies(manifest: WorkspaceManifest, errors: string[]): void {
@@ -171,6 +216,21 @@ function validateLicenseCopy(manifest: WorkspaceManifest, rootDir: string, error
   ) {
     errors.push(`${manifest.path}: LICENSE must match the root LICENSE exactly`);
   }
+}
+
+function validatePackageReadme(
+  manifest: WorkspaceManifest,
+  rootDir: string,
+  errors: string[],
+): void {
+  const readme = join(rootDir, dirname(manifest.path), "README.md");
+  if (!existsSync(readme)) {
+    errors.push(`${manifest.path}: README.md file is required`);
+    return;
+  }
+  const text = readFileSync(readme, "utf8");
+  const name = stringValue(manifest.data.name);
+  if (name && !text.includes(name)) errors.push(`${manifest.path}: README.md must name ${name}`);
 }
 
 interface PackedFile {

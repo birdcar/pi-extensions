@@ -9,3 +9,4 @@ bun.lock
 *.tsbuildinfo
 .pi-tests
 docs/ideation/**
+packages/*/CHANGELOG.md

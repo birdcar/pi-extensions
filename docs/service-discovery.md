@@ -70,5 +70,7 @@ side-effect approvals. Consumers discover on demand, implement explicit fallback
 `undefined`, and propagate invocation failures. Service method results must be returned through
 promises, not required observational events.
 
-See the type-checked fixtures in `tests/fixtures/services/` for a side-effect-free echo service with
-cancellation and two independent consumers.
+See the type-checked fixtures `../tests/fixtures/services/contract.ts`,
+`../tests/fixtures/services/provider.ts`, `../tests/fixtures/services/consumer-a.ts`, and
+`../tests/fixtures/services/consumer-b.ts` for a side-effect-free echo service with cancellation and
+two independent consumers.
