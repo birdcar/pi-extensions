@@ -20,13 +20,15 @@
     "check:package": "bun scripts/check-package.ts",
     "check:docs": "bun scripts/check-docs.ts",
     "test:boundaries": "bun test tests/tooling/boundaries.test.ts",
-    "test:release": "bun test tests/release/manifest.test.ts",
-    "test:release-lock": "bun test tests/release/lockfile.test.ts",
-    "test:publish": "bun test tests/release/publish.test.ts",
     "test:ci": "bun test tests/release/workflows.test.ts tests/tooling/workspace.test.ts tests/tooling/docs.test.ts tests/tooling/write-for-package.test.ts",
-    "check": "bun run build && bun run check:workspace && bun run test:boundaries && bun run typecheck && bun run lint && bun run test:services && bun run test:write-for && bun run test:execution && bun run test:pi && bun run check:package && bun run test:release && bun run test:release-lock && bun run test:publish && bun run test:ci && bun run check:docs"
+    "check": "bun run build && bun run check:workspace && bun run test:boundaries && bun run typecheck && bun run lint && bun run test:services && bun run test:write-for && bun run test:execution && bun run test:pi && bun run check:package && bun run test:ci && bun run check:docs",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "bun run check && changeset publish",
+    "postinstall": "perl -pi -e 's#\"https://socket-firewall\\.workos\\.dev/[^\"]*\"#\"\"#g' bun.lock"
   },
   "devDependencies": {
+    "@changesets/cli": "3.0.3",
     "@earendil-works/pi-coding-agent": "0.87.0",
     "@eslint/js": "9.36.0",
     "@types/bun": "1.2.22",
@@ -34,7 +36,6 @@
     "@types/semver": "7.7.1",
     "eslint": "9.36.0",
     "prettier": "3.6.2",
-    "release-please": "17.1.1",
     "semver": "7.7.2",
     "typescript": "5.9.2",
     "typescript-eslint": "8.44.0",

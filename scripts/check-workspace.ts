@@ -81,8 +81,6 @@ export function validateWorkspaceManifests(
     }
   }
 
-  validateReleaseRegistration(manifests, rootDir, errors);
-
   for (const manifest of manifests.filter((item) => item.path !== "package.json")) {
     const isPrivate = manifest.data.private === true;
     if (isPrivate) continue;
@@ -115,48 +113,6 @@ export function validateWorkspaceManifests(
   }
 
   return { ok: errors.length === 0, errors };
-}
-
-function readReleasePackagePaths(rootDir: string, errors: string[]): Set<string> {
-  const configPath = join(rootDir, "release-please-config.json");
-  if (!existsSync(configPath)) {
-    errors.push("release-please-config.json: release configuration is required");
-    return new Set();
-  }
-  const config = readJson(configPath);
-  const packages = objectValue(config.packages);
-  if (!packages) {
-    errors.push("release-please-config.json: packages map is required");
-    return new Set();
-  }
-  return new Set(Object.keys(packages).map((path) => `${path}/package.json`));
-}
-
-function validateReleaseRegistration(
-  manifests: WorkspaceManifest[],
-  rootDir: string,
-  errors: string[],
-): void {
-  const releasePaths = readReleasePackagePaths(rootDir, errors);
-  for (const path of releasePaths) {
-    const manifest = manifests.find((item) => item.path === path);
-    if (!manifest) {
-      errors.push(`release-please-config.json: configured package ${path} is missing`);
-      continue;
-    }
-    if (manifest.data.private === true) {
-      errors.push(`${path}: private package must not be registered for release`);
-    }
-  }
-
-  for (const manifest of manifests.filter((item) => item.path !== "package.json")) {
-    if (manifest.data.private === true) continue;
-    if (!releasePaths.has(manifest.path)) {
-      errors.push(
-        `${manifest.path}: public package must be registered in release-please-config.json`,
-      );
-    }
-  }
 }
 
 function validatePublicDependencies(manifest: WorkspaceManifest, errors: string[]): void {

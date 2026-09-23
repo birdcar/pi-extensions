@@ -35,10 +35,9 @@ discovered API propagate as ordinary failures. See
 ## Packages and releases
 
 Add packages under `packages/*`. Public packages use `@birdcar/pi-*`, include their own README and
-LICENSE, declare service contracts without a central registry, and opt into independent releases
-through `release-please-config.json` plus `.release-please-manifest.json` policy. Root-only
-maintenance does not release every package automatically.
+LICENSE, and declare service contracts without a central registry. Each public package is versioned
+and published independently with Changesets: add a changeset (`bun changeset`) with any user-facing
+package change; root-only maintenance releases nothing.
 
-Release setup and activation are documented in [docs/releasing.md](docs/releasing.md). The release
-workflow is guarded by `RELEASE_ENABLED=true` until the maintainer connects the real GitHub
-repository and npm trusted-publisher binding.
+Releases publish to npm from GitHub Actions with provenance. See
+[docs/releasing.md](docs/releasing.md) for the flow and the one-time trusted-publishing setup.

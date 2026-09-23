@@ -61,3 +61,23 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Run checks
         run: ${{ matrix.command }}
+
+  changeset-status:
+    if: github.event_name == 'pull_request' && github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24.8.0"
+      - name: Install Bun 1.3.14
+        shell: bash
+        run: curl -fsSL https://bun.sh/install | bash -s -- bun-v1.3.14
+      - name: Add Bun to PATH
+        run: echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Require a changeset for package changes
+        run: bun run changeset status --since=origin/main

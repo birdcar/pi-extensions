@@ -7,6 +7,9 @@ runner, but published runtime packages must work for ordinary Node/Pi consumers 
 
 - Use `bun install`, `bun run <script>`, and `bun test` for local development.
 - Keep dependencies pinned at the root and keep `bun.lock` in sync with `package.json`.
+- Add a changeset for any user-facing change to a package: run `bun changeset`, pick the packages
+  and bump, and commit the generated file with your change. No changeset means no release; docs,
+  config, and CI-only changes don't need one.
 - Run type checks, tests, lint, workspace, release, package, and docs validation before requesting a
   commit.
 - Read `docs/releasing.md` before changing release configuration, workflow files, package metadata,

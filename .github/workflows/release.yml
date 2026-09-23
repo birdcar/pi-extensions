@@ -3,146 +3,41 @@ name: release
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      release_tag:
-        description: Exact component release tag to recover, for example pi-services-v0.1.0
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.workflow }}-${{ github.ref }}-${{ inputs.release_tag || 'auto' }}
+  group: release-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release-management:
-    if: github.event_name == 'push' && vars.RELEASE_ENABLED == 'true'
+  release:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
       pull-requests: write
-      issues: write
-    outputs:
-      paths_released: ${{ steps.release.outputs.paths_released }}
-      releases_created: ${{ steps.release.outputs.releases_created }}
-      services_version: ${{ steps.release.outputs['packages/services--version'] }}
-      services_tag: ${{ steps.release.outputs['packages/services--tag_name'] }}
-      services_sha: ${{ steps.release.outputs['packages/services--sha'] }}
-      write_for_version: ${{ steps.release.outputs['packages/write-for--version'] }}
-      write_for_tag: ${{ steps.release.outputs['packages/write-for--tag_name'] }}
-      write_for_sha: ${{ steps.release.outputs['packages/write-for--sha'] }}
-    steps:
-      - name: Create GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b
-        with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
-      - id: release
-        name: Open or update release PRs
-        uses: googleapis/release-please-action@c2a5a2bd6a758a0937f1ddb1e8950609867ed15c
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-      - name: Install Node 22.19.0
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: "22.19.0"
-      - name: Install Bun 1.3.14
-        run: curl -fsSL https://bun.sh/install | bash -s -- bun-v1.3.14
-      - name: Add Bun to PATH
-        run: echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
-      - name: Refresh Bun lockfile only on trusted release PR branches
-        if: steps.release.outputs.prs != '' && steps.release.outputs.prs != '[]'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          RELEASE_PRS: ${{ steps.release.outputs.prs }}
-        run: |
-          set -euo pipefail
-          echo "$RELEASE_PRS" | jq -c '.[]' | while read -r release_pr; do
-            number="$(jq -r '.number // empty' <<<"$release_pr")"
-            test -n "$number"
-            pr="$(gh pr view "$number" --json baseRefName,headRefName,headRepository,headRepositoryOwner)"
-            test "$(jq -r '.baseRefName' <<<"$pr")" = "main"
-            test "$(jq -r '.headRepository.name' <<<"$pr")" = "${{ github.event.repository.name }}"
-            test "$(jq -r '.headRepositoryOwner.login' <<<"$pr")" = "${{ github.repository_owner }}"
-            head="$(jq -r '.headRefName' <<<"$pr")"
-            case "$head" in release-please--branches--*|release-please-*) ;; *) echo "untrusted release PR branch: $head" >&2; exit 1 ;; esac
-            git fetch origin "$head"
-            git checkout -B "$head" "origin/$head"
-            bun install --lockfile-only --ignore-scripts
-            mapfile -t changed < <(git diff --name-only)
-            bun scripts/release.ts check-lock-diff "${changed[@]}"
-            if [ "${#changed[@]}" -gt 0 ]; then
-              git config user.name "birdcar-release-bot"
-              git config user.email "birdcar-release-bot@users.noreply.github.com"
-              git add bun.lock
-              git commit -m "chore: refresh bun lock for release PR"
-              git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:$head"
-            fi
-            git checkout -
-          done
-
-  publish:
-    if:
-      always() && vars.RELEASE_ENABLED == 'true' && (github.event_name == 'workflow_dispatch' ||
-      needs.release-management.outputs.releases_created == 'true')
-    needs: [release-management]
-    runs-on: ubuntu-24.04
-    environment: npm-publish
-    permissions:
-      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          ref: ${{ inputs.release_tag || github.sha }}
-          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "24.8.0"
       - name: Pin npm 11.6.0
         run: npm install -g npm@11.6.0
       - name: Install Bun 1.3.14
+        shell: bash
         run: curl -fsSL https://bun.sh/install | bash -s -- bun-v1.3.14
       - name: Add Bun to PATH
         run: echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Validate release source and publish selected artifacts
+      - name: Open the version PR or publish
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          version-script: bun run version
+          publish-script: bun run release
+          pr-title: "chore: version packages"
+          commit-message: "chore: version packages"
         env:
-          RELEASE_TAG: ${{ inputs.release_tag }}
-          PATHS_RELEASED: ${{ needs.release-management.outputs.paths_released }}
-          SERVICES_VERSION: ${{ needs.release-management.outputs.services_version }}
-          SERVICES_TAG: ${{ needs.release-management.outputs.services_tag }}
-          SERVICES_SHA: ${{ needs.release-management.outputs.services_sha }}
-          WRITE_FOR_VERSION: ${{ needs.release-management.outputs.write_for_version }}
-          WRITE_FOR_TAG: ${{ needs.release-management.outputs.write_for_tag }}
-          WRITE_FOR_SHA: ${{ needs.release-management.outputs.write_for_sha }}
-          GITHUB_SHA: ${{ github.sha }}
-          GITHUB_REF: ${{ github.ref }}
-        run: |
-          set -euo pipefail
-          if [ -n "${RELEASE_TAG:-}" ]; then
-            case "$RELEASE_TAG" in pi-services-v*) path="packages/services"; version="${RELEASE_TAG#pi-services-v}" ;; pi-write-for-v*) path="packages/write-for"; version="${RELEASE_TAG#pi-write-for-v}" ;; *) echo "unknown release tag" >&2; exit 1 ;; esac
-            git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"
-            sha="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
-            test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG"
-            test "$GITHUB_SHA" = "$sha"
-            test "$sha" = "$(git rev-parse HEAD)"
-            releases="$(jq -nc --arg path "$path" --arg version "$version" --arg tag "$RELEASE_TAG" --arg sha "$sha" '[{path: $path, version: $version, tag: $tag, sha: $sha}]')"
-          else
-            metadata="$(jq -nc --arg services_version "$SERVICES_VERSION" --arg services_tag "$SERVICES_TAG" --arg services_sha "$SERVICES_SHA" --arg writer_version "$WRITE_FOR_VERSION" --arg writer_tag "$WRITE_FOR_TAG" --arg writer_sha "$WRITE_FOR_SHA" '{"packages/services": {version: $services_version, tag: $services_tag, sha: $services_sha}, "packages/write-for": {version: $writer_version, tag: $writer_tag, sha: $writer_sha}}')"
-            releases="$(bun scripts/release.ts select-releases "$PATHS_RELEASED" "$metadata")"
-            releases="$(bun scripts/release.ts validate-releases "$releases")"
-          fi
-          bun scripts/publish.ts --execute --releases="$releases"
+          NPM_CONFIG_PROVENANCE: "true"
