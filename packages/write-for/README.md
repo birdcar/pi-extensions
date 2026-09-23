@@ -118,10 +118,10 @@ global fallback.
 ```mermaid
 flowchart TD
     roots["Global root + selected override root"] --> register["Choose register: request, then channel default"]
-    register --> style["Style body: override → global → omit"]
+    register --> styleBody["Style body: override → global → omit"]
     register --> voice["Register body: override → global → error if missing"]
     register --> channel["Channel body: override → global → built-in or generic"]
-    style --> prompt["Writing prompt: defaults + style + register + channel"]
+    styleBody --> prompt["Writing prompt: defaults + style + register + channel"]
     voice --> prompt
     channel --> prompt
     caller["Caller rules / rewrite instruction<br/>including one-off tone"] -->|"win over conflicting profile prose"| prompt
