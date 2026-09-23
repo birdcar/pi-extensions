@@ -29,7 +29,7 @@ if ! gh auth status --hostname github.com >/dev/null 2>&1; then
 fi
 
 pkg_field() { node -p "require('./$1/package.json').$2"; }
-http_status() { curl -s -o /dev/null -w '%{http_code}' "$1" || true; }
+http_status() { curl -s --connect-timeout 10 --max-time 30 -o /dev/null -w '%{http_code}' "$1" || true; }
 
 if ! npm_user="$(npm whoami --registry="$REGISTRY" 2>/dev/null)"; then
   echo "== not logged in to $REGISTRY, running npm login"
@@ -80,6 +80,7 @@ for dir in ${missing[@]+"${missing[@]}"}; do
     published="${published:+$published,}$name"
   elif [ "$(http_status "$REGISTRY${name/\//%2f}/$version")" = 200 ]; then
     echo "== $name@$version showed up after the failed publish (replica lag), continuing"
+    published="${published:+$published,}$name"
   else
     echo "!! publish of $name failed" >&2
     exit 1
