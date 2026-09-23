@@ -1,6 +1,6 @@
 {
   "name": "@birdcar/pi-services",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Portable service helpers for Pi extensions.",
   "license": "MIT",
   "repository": {
