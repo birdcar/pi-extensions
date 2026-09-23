@@ -124,25 +124,40 @@ function isProjectLocalExplicitRoot(
   }
 }
 
+export function validateExplicitConfigRoot(input: {
+  cwd: string;
+  explicit: string;
+  trustedProject: boolean;
+  piConfigDirName: string;
+  source?: string;
+}): string {
+  const explicit = resolve(input.explicit);
+  if (!existsSync(explicit) || !lstatSync(explicit).isDirectory()) {
+    throw createWriteForError(
+      "CONFIG_INVALID",
+      `${input.source ?? "PI_WRITE_FOR_CONFIG"} is not a directory: ${explicit}`,
+    );
+  }
+  if (
+    !input.trustedProject &&
+    isProjectLocalExplicitRoot(input.cwd, explicit, input.piConfigDirName)
+  ) {
+    throw createWriteForError(
+      "CONFIG_INVALID",
+      `project-local ${input.source ?? "PI_WRITE_FOR_CONFIG"} requires project trust`,
+    );
+  }
+  return explicit;
+}
+
 function selectedProjectRoot(input: ResolveWritingProfileInput): string | undefined {
   if (input.envConfig) {
-    const explicit = resolve(input.envConfig);
-    if (!existsSync(explicit) || !lstatSync(explicit).isDirectory()) {
-      throw createWriteForError(
-        "CONFIG_INVALID",
-        `PI_WRITE_FOR_CONFIG is not a directory: ${explicit}`,
-      );
-    }
-    if (
-      !input.trustedProject &&
-      isProjectLocalExplicitRoot(input.cwd, explicit, input.piConfigDirName)
-    ) {
-      throw createWriteForError(
-        "CONFIG_INVALID",
-        "project-local PI_WRITE_FOR_CONFIG requires project trust",
-      );
-    }
-    return explicit;
+    return validateExplicitConfigRoot({
+      cwd: input.cwd,
+      explicit: input.envConfig,
+      trustedProject: input.trustedProject,
+      piConfigDirName: input.piConfigDirName,
+    });
   }
   if (!input.trustedProject) return undefined;
   return nearestProjectRoot(input.cwd, input.piConfigDirName);

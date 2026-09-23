@@ -2,13 +2,16 @@
 
 The repository uses Release Please manifest mode for independent package releases.
 `packages/services` is configured as component `pi-services`, producing tags such as
-`pi-services-v0.1.0` and a per-package changelog when releases begin.
+`pi-services-v0.1.0`; `packages/write-for` is configured as component `pi-write-for`, producing tags
+such as `pi-write-for-v0.1.0`. Each package gets its own changelog when releases begin.
 
 Release routing is path based. Root-only maintenance does not automatically release every package; a
 tooling change that affects shipped output needs an intentional package-level change. Compatible
-helper updates do not rewrite consumers automatically. If a future consumer must adopt a newly
-released helper range, release and publish the helper first, then land an explicit consumer
-`fix(deps)` change.
+helper updates do not rewrite consumers automatically. Pi Write For depends on the services helper,
+so publish planning validates `@birdcar/pi-services` first in a batch and blocks a writer-only
+publication when the required helper release is not already available. If a future consumer must
+adopt a newly released helper range, release and publish the helper first, then land an explicit
+consumer `fix(deps)` change.
 
 ## Local commands
 
@@ -51,6 +54,7 @@ workflow at the exact tag:
 
 ```sh
 gh workflow run release.yml --ref pi-services-v0.1.0 -f release_tag=pi-services-v0.1.0
+# or: gh workflow run release.yml --ref pi-write-for-v0.1.0 -f release_tag=pi-write-for-v0.1.0
 ```
 
 Recovery builds the tagged source, checks the peeled tag commit and package version, skips an exact

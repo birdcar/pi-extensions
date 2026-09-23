@@ -1,12 +1,12 @@
 # Pi extension monorepo
 
-This repository is the foundation for independently released Pi extension packages. No user-facing
-extension has shipped yet.
+This repository is the foundation for independently released Pi extension packages.
 
 `@birdcar/pi-services` is a shared helper library for optional in-process services between Pi
-extensions. It is not itself a Pi extension to install for tools or commands. Future extensions will
-be installed independently, for example `pi install npm:@birdcar/pi-<name>` once a real package
-exists.
+extensions. It is not itself a Pi extension to install for tools or commands.
+`@birdcar/pi-write-for` is a Pi extension for drafting, rewriting, and training user-reviewed
+writing profiles through that service contract; it is installed independently once the maintainer
+publishes it.
 
 ## Development
 

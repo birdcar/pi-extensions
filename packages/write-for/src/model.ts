@@ -12,6 +12,8 @@ export interface HostModel {
   id?: string;
   modelId?: string;
   name?: string;
+  contextWindow?: number;
+  maxTokens?: number;
 }
 
 export interface HostModelRegistry {

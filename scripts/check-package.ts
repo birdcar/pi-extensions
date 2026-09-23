@@ -19,6 +19,7 @@ export interface PackageArtifactOptions {
   packagePath?: string;
   keepTemp?: boolean;
   dependencyTarballs?: string[];
+  skipBuild?: boolean;
 }
 
 function run(command: string, args: string[], cwd: string): string {
@@ -40,7 +41,7 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
 
   try {
     requireReadmeAndLicense(packageDir);
-    run("bun", ["run", "build"], root);
+    if (!options.skipBuild) run("bun", ["run", "build"], root);
     const packJson = run("npm", ["pack", "--json", "--pack-destination", temp], packageDir);
     const [packed] = JSON.parse(packJson) as Array<{
       filename: string;
@@ -56,13 +57,17 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
     );
     if (forbidden.length > 0)
       throw new Error(`tarball contains forbidden files: ${forbidden.join(", ")}`);
-    for (const required of [
+    const requiredFiles = [
       "dist/index.js",
       "dist/index.d.ts",
       "LICENSE",
       "README.md",
       "package.json",
-    ]) {
+    ];
+    if (packagePath === "packages/write-for") {
+      requiredFiles.push("dist/contract.js", "dist/contract.d.ts", "dist/document-worker.js");
+    }
+    for (const required of requiredFiles) {
       if (!paths.includes(required)) throw new Error(`tarball missing ${required}`);
     }
 
@@ -95,6 +100,20 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
         }
         if (packed.name === "@birdcar/pi-services" && name.startsWith("@earendil-works/"))
           throw new Error("services helper must not depend on Pi packages");
+      }
+    }
+
+    const piExtensions = manifest.pi as { extensions?: unknown } | undefined;
+    if (packed.name === "@birdcar/pi-write-for") {
+      if (
+        !Array.isArray(piExtensions?.extensions) ||
+        !piExtensions.extensions.includes("./dist/index.js")
+      ) {
+        throw new Error("writer pi.extensions must include shipped ./dist/index.js");
+      }
+      for (const name of ["mammoth", "unpdf", "@birdcar/pi-services"] as const) {
+        const deps = manifest.dependencies as Record<string, string> | undefined;
+        if (!deps?.[name]) throw new Error(`writer dependency ${name} is required`);
       }
     }
 
@@ -150,6 +169,106 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
       );
     }
 
+    if (packed.name === "@birdcar/pi-write-for") {
+      const fixtureDir = join(temp, "writer-fixtures");
+      mkdirSync(fixtureDir);
+      const sourceFixtureDir = join(root, "packages/write-for/test/fixtures");
+      const pdfFixture = join(fixtureDir, "synthetic.pdf");
+      const docxFixture = join(fixtureDir, "synthetic.docx");
+      writeFileSync(pdfFixture, readFileSync(join(sourceFixtureDir, "voice.pdf")));
+      writeFileSync(docxFixture, readFileSync(join(sourceFixtureDir, "voice.docx")));
+      writeFileSync(
+        join(temp, "writer-contract-consumer.mjs"),
+        `import { discoverService } from "@birdcar/pi-services";\n` +
+          `import { WRITE_FOR_REWRITE_EVENT, writeForContract } from "${packed.name}/contract";\n` +
+          `const listeners = new Map();\n` +
+          `const events = {\n` +
+          `  emit(channel, data) { for (const handler of listeners.get(channel) ?? []) handler(data); },\n` +
+          `  on(channel, handler) {\n` +
+          `    const handlers = listeners.get(channel) ?? new Set();\n` +
+          `    handlers.add(handler);\n` +
+          `    listeners.set(channel, handlers);\n` +
+          `    return () => handlers.delete(handler);\n` +
+          `  },\n` +
+          `};\n` +
+          `if (WRITE_FOR_REWRITE_EVENT !== "birdcar.write-for:v1:rewrite") throw new Error("bad rewrite event export");\n` +
+          `if (discoverService(events, writeForContract) !== undefined) throw new Error("clean contract consumer should not discover an unprovided service");\n` +
+          `if (!writeForContract.isApi({ draft: async () => ({}), rewrite: async () => ({}) })) throw new Error("contract guard rejected api shape");\n`,
+      );
+      run("node", [join(temp, "writer-contract-consumer.mjs")], temp);
+
+      writeFileSync(
+        join(temp, "writer-consumer.mjs"),
+        `import { discoverService } from "@birdcar/pi-services";\n` +
+          `import { WRITE_FOR_REWRITE_EVENT, writeForContract } from "${packed.name}/contract";\n` +
+          `import extension from "${packed.name}";\n` +
+          `const documents = await import(${JSON.stringify(pathToFileURL(join(installedPackageDir, "dist/documents.js")).href)});\n` +
+          `if (typeof extension !== "function") throw new Error("extension entrypoint did not load");\n` +
+          `const listeners = new Map();\n` +
+          `const events = {\n` +
+          `  emit(channel, data) { for (const handler of listeners.get(channel) ?? []) handler(data); },\n` +
+          `  on(channel, handler) {\n` +
+          `    const handlers = listeners.get(channel) ?? new Set();\n` +
+          `    handlers.add(handler);\n` +
+          `    listeners.set(channel, handlers);\n` +
+          `    return () => handlers.delete(handler);\n` +
+          `  },\n` +
+          `};\n` +
+          `const lifecycle = new Map();\n` +
+          `const commands = new Map();\n` +
+          `const tools = new Map();\n` +
+          `const host = {\n` +
+          `  events,\n` +
+          `  on(event, handler) {\n` +
+          `    const handlers = lifecycle.get(event) ?? new Set();\n` +
+          `    handlers.add(handler);\n` +
+          `    lifecycle.set(event, handlers);\n` +
+          `    return () => handlers.delete(handler);\n` +
+          `  },\n` +
+          `  registerCommand(name, command) { commands.set(name, command); },\n` +
+          `  registerTool(tool) { tools.set(tool.name, tool); },\n` +
+          `  diagnostic(message) { throw new Error(String(message)); },\n` +
+          `};\n` +
+          `const state = extension(host);\n` +
+          `if (!commands.has("write-for") || !tools.has("write_for_profile")) throw new Error("installed extension did not register commands/tools");\n` +
+          `if (!discoverService(events, writeForContract)) throw new Error("installed extension did not provide service");\n` +
+          `events.emit(WRITE_FOR_REWRITE_EVENT, { request: { channel: "email", text: "hi" }, accept(promise) { promise.catch(() => undefined); } });\n` +
+          `state.dispose();\n` +
+          `if (discoverService(events, writeForContract) !== undefined) throw new Error("installed extension service did not dispose");\n` +
+          `const pdf = await documents.extractDocumentText({ path: ${JSON.stringify(pdfFixture)} });\n` +
+          `if (!pdf.text.includes("Warm practical prose on page one.") || pdf.pages !== 2) throw new Error("installed PDF worker extraction failed");\n` +
+          `const docx = await documents.extractDocumentText({ path: ${JSON.stringify(docxFixture)} });\n` +
+          `if (!docx.text.includes("Split runs make one sentence.")) throw new Error("installed DOCX worker extraction failed");\n`,
+      );
+      run("node", [join(temp, "writer-consumer.mjs")], temp);
+
+      writeFileSync(
+        join(temp, "writer-consumer.ts"),
+        `import { type WritingResult, type DraftRequest, writeForContract } from "${packed.name}/contract";\n` +
+          `const request: DraftRequest = { channel: "email", subject: "status" };\n` +
+          `const result: WritingResult = { text: "ok", channel: request.channel, register: "professional", model: { provider: "fixture", id: "writer" }, usage: { inputTokens: 1, outputTokens: 2, cacheReadTokens: 0, cacheWriteTokens: 0 } };\n` +
+          `writeForContract.isApi({ draft: async () => result, rewrite: async () => result });\n`,
+      );
+      writeFileSync(
+        join(temp, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+            target: "ES2022",
+            strict: true,
+            skipLibCheck: true,
+          },
+          include: ["writer-consumer.ts"],
+        }),
+      );
+      run(
+        join(root, "node_modules/.bin/tsc"),
+        ["-p", join(temp, "tsconfig.json"), "--noEmit"],
+        temp,
+      );
+    }
+
     if (!existsSync(tarball)) throw new Error(`tarball missing at ${tarball}`);
     return {
       name: packed.name,
@@ -166,11 +285,14 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  const services = validatePackageArtifact({ keepTemp: true });
+  const root = resolve(import.meta.dirname, "..");
+  run("bun", ["run", "build"], root);
+  const services = validatePackageArtifact({ keepTemp: true, skipBuild: true });
   try {
     const writer = validatePackageArtifact({
       packagePath: "packages/write-for",
       dependencyTarballs: [services.tarball],
+      skipBuild: true,
     });
     console.log(
       `package artifacts verified: ${basename(services.tarball)}, ${basename(writer.tarball)}`,

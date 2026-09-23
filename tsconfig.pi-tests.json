@@ -7,5 +7,5 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["tests/pi/**/*.ts"]
+  "include": ["tests/pi/**/*.ts", "tests/fixtures/write-for/provider.ts"]
 }

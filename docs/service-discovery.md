@@ -135,6 +135,18 @@ side-effect approvals. Consumers discover on demand, implement explicit fallback
 `undefined`, and propagate invocation failures. Service method results must be returned through
 promises, not required observational events.
 
+Pi Write For exposes the same pattern through `@birdcar/pi-write-for/contract`:
+
+```ts
+import { discoverService } from "@birdcar/pi-services";
+import { writeForContract } from "@birdcar/pi-write-for/contract";
+
+const writer = discoverService(pi.events, writeForContract);
+const draft = writer
+  ? await writer.draft({ channel: "email", subject: "Launch notes" })
+  : undefined;
+```
+
 See the type-checked fixtures `../tests/fixtures/services/contract.ts`,
 `../tests/fixtures/services/provider.ts`, `../tests/fixtures/services/consumer-a.ts`, and
 `../tests/fixtures/services/consumer-b.ts` for a side-effect-free echo service with cancellation and

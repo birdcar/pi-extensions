@@ -40,6 +40,7 @@ function fixture(): { root: string; artifacts: Record<string, PackageArtifact> }
     JSON.stringify({
       packages: {
         "packages/services": { component: "pi-services" },
+        "packages/write-for": { component: "pi-write-for" },
         "packages/alpha": { component: "pi-alpha" },
         "packages/private": { component: "pi-private" },
       },
@@ -48,6 +49,11 @@ function fixture(): { root: string; artifacts: Record<string, PackageArtifact> }
   const packages = {
     "packages/services": { name: "@birdcar/pi-services", version: "0.1.0" },
     "packages/alpha": { name: "@birdcar/pi-alpha", version: "2.0.0" },
+    "packages/write-for": {
+      name: "@birdcar/pi-write-for",
+      version: "0.1.0",
+      dependencies: { "@birdcar/pi-services": "^0.1.0" },
+    },
     "packages/private": { name: "@birdcar/pi-private", version: "1.0.0", private: true },
   };
   for (const [path, manifest] of Object.entries(packages)) {
@@ -60,6 +66,7 @@ function fixture(): { root: string; artifacts: Record<string, PackageArtifact> }
     artifacts: {
       "packages/services": artifact(root, "@birdcar/pi-services", "0.1.0", "services.tgz"),
       "packages/alpha": artifact(root, "@birdcar/pi-alpha", "2.0.0", "alpha.tgz"),
+      "packages/write-for": artifact(root, "@birdcar/pi-write-for", "0.1.0", "write-for.tgz"),
       "packages/private": artifact(root, "@birdcar/pi-private", "1.0.0", "private.tgz"),
     },
   };
@@ -70,6 +77,16 @@ function release(overrides = {}) {
     path: "packages/services",
     version: "0.1.0",
     tag: "pi-services-v0.1.0",
+    sha,
+    ...overrides,
+  };
+}
+
+function writerRelease(overrides = {}) {
+  return {
+    path: "packages/write-for",
+    version: "0.1.0",
+    tag: "pi-write-for-v0.1.0",
     sha,
     ...overrides,
   };
@@ -192,6 +209,65 @@ describe("publication planning", () => {
     });
     expect(second.ok).toBe(false);
     expect(second.errors.join("\n")).toContain("different integrity");
+  });
+
+  test("orders a batched writer release after the services helper", () => {
+    const { root, artifacts } = fixture();
+    const plan = createPublishPlan([writerRelease(), release()], {
+      rootDir: root,
+      sourceSha: sha,
+      registry: () => ({ status: "missing" }),
+      artifactFactory: (path) => artifacts[path]!,
+    });
+    expect(plan.ok).toBe(true);
+    expect(plan.items.map((item) => item.packageName)).toEqual([
+      "@birdcar/pi-services",
+      "@birdcar/pi-write-for",
+    ]);
+  });
+
+  test("rejects a batched writer release when the selected helper version does not satisfy its declared range", () => {
+    const { root, artifacts } = fixture();
+    writeFileSync(
+      join(root, "packages/write-for/package.json"),
+      JSON.stringify({
+        name: "@birdcar/pi-write-for",
+        version: "0.1.0",
+        dependencies: { "@birdcar/pi-services": "^9.0.0" },
+      }),
+    );
+    const plan = createPublishPlan([writerRelease(), release()], {
+      rootDir: root,
+      sourceSha: sha,
+      registry: () => ({ status: "missing" }),
+      artifactFactory: (path) => artifacts[path]!,
+    });
+    expect(plan.ok).toBe(false);
+    expect(plan.errors.join("\n")).toContain(
+      "selected helper @birdcar/pi-services@0.1.0 does not satisfy declared range ^9.0.0",
+    );
+  });
+
+  test("fails writer-only publication when the required helper is unavailable", () => {
+    const { root, artifacts } = fixture();
+    const queried: string[] = [];
+    writeFileSync(
+      join(root, "packages/services/package.json"),
+      JSON.stringify({ name: "@birdcar/pi-services", version: "9.9.9" }),
+    );
+    const plan = createPublishPlan([writerRelease()], {
+      rootDir: root,
+      sourceSha: sha,
+      registry: (name, version) => {
+        if (name === "@birdcar/pi-services") queried.push(version);
+        return { status: "missing" };
+      },
+      artifactFactory: (path) => artifacts[path]!,
+    });
+    expect(plan.ok).toBe(false);
+    expect(plan.errors.join("\n")).toContain("required helper @birdcar/pi-services@^0.1.0");
+    expect(queried).toContain("^0.1.0");
+    expect(queried).not.toContain("9.9.9");
   });
 
   test("retry after one of two publishes succeeded skips it and publishes the missing package", () => {
