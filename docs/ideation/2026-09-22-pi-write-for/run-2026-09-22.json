@@ -1,0 +1,63 @@
+{
+  "projectName": "Pi Write For",
+  "slug": "2026-09-22-pi-write-for",
+  "date": "2026-09-22",
+  "branch": "ideation/2026-09-22-pi-write-for",
+  "baseBranch": "main",
+  "strict": true,
+  "summary": {
+    "completed": ["Package, contract, and layered configuration"],
+    "noops": [],
+    "failed": ["Headless writing and composition entrypoints"],
+    "skipped": ["Hybrid voice learning and document ingestion", "Portable distribution and acceptance integration"],
+    "results": [
+      {
+        "title": "Package, contract, and layered configuration",
+        "result": "PASS",
+        "reviewStatus": "passed",
+        "commitHash": "95332599222093d6c825fb53b138c72c5f44dc0d",
+        "summary": "Implemented the @birdcar/pi-write-for phase-1 package skeleton, public contract, config resolver, tests, fixtures, and second-package workspace/release/docs tooling. All required validation commands pass. — The cycle-2 blocking issue is addressed: the aggregate check now builds before workspace export validation, and CRLF frontmatter delimiters are recognized. Implementation is ready to commit with one non-blocking prose-preservation cleanup remaining.",
+        "findings": [
+          "medium/spec-deviation packages/write-for/src/config.ts:158 — splitFrontmatter normalizes every CRLF in the file before returning body text, but the spec says to normalize only frontmatter boundaries/surrounding whitespace and not the user's prose → Preserve original body line endings when slicing prose while still accepting CRLF frontmatter delimiters"
+        ],
+        "warnings": [],
+        "reviewCycles": 3
+      },
+      {
+        "title": "Headless writing and composition entrypoints",
+        "result": "FAIL",
+        "reviewStatus": "failed",
+        "commitHash": null,
+        "summary": "Review FAILED after 3 cycle(s) with 1 blocking finding(s). Headless runs do not commit at the cycle cap; changes left unstaged.",
+        "findings": [
+          "high/spec-deviation packages/write-for/src/events.ts:34 — The event adapter treats any object as a RewriteRequest, so malformed requests with a callable accept are discovered/accepted and can start service work instead of being rejected during payload validation as specified → Use validateRewriteRequest/explainInvalidWritingRequest before service discovery or accept(), emit a source-free diagnostic, and add a regression test for malformed request envelopes",
+          "medium/testing package.json:16 — The aggregate write-for test script still runs only phase-1 contract/config tests, so `bun run check` does not exercise the new phase-2 model/engine/service/entrypoint/event tests from the spec → Update `test:write-for` or `check` to include the phase-2 test files"
+        ],
+        "warnings": [],
+        "reviewCycles": 3
+      },
+      {
+        "title": "Hybrid voice learning and document ingestion",
+        "result": "SKIPPED",
+        "reviewStatus": "not-run",
+        "commitHash": null,
+        "summary": "blocked by an upstream failure",
+        "findings": [],
+        "warnings": [],
+        "reviewCycles": 0
+      },
+      {
+        "title": "Portable distribution and acceptance integration",
+        "result": "SKIPPED",
+        "reviewStatus": "not-run",
+        "commitHash": null,
+        "summary": "blocked by an upstream failure",
+        "findings": [],
+        "warnings": [],
+        "reviewCycles": 0
+      }
+    ]
+  },
+  "verify": null,
+  "notesFiles": []
+}

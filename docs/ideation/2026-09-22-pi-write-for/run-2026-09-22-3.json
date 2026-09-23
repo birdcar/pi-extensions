@@ -1,0 +1,51 @@
+{
+  "projectName": "Pi Write For",
+  "slug": "2026-09-22-pi-write-for",
+  "date": "2026-09-22",
+  "branch": "ideation/2026-09-22-pi-write-for",
+  "baseBranch": "main",
+  "strict": true,
+  "summary": {
+    "completed": [
+      "Hybrid voice learning and document ingestion"
+    ],
+    "noops": [],
+    "failed": [
+      "Portable distribution and acceptance integration"
+    ],
+    "skipped": [],
+    "results": [
+      {
+        "title": "Hybrid voice learning and document ingestion",
+        "result": "PASS",
+        "reviewStatus": "passed",
+        "commitHash": "d64362ce7069d2f60de5a78c64f91b30c768e79d",
+        "summary": "Implemented hybrid voice learning with training commands/tools, local text/PDF/DOCX ingestion, configured-model distillation, reviewed persistence, retention handling, docs, fixtures, and tests. All declared validation commands pass. — Prior cycle blockers appear addressed: explicit roots are trust-validated, tool results use Pi content arrays, document tests cover emitted worker abort/deadline paths, diagnostics require review before partial admission, and prompt sizing uses model metadata. Remaining issues are non-blocking edge cases around all-failed diagnostics, stale multi-target saves, retention after failed saves, and tool-call cancellation. Ready to commit after considering these medium-severity fixes.",
+        "findings": [
+          "medium/spec-deviation packages/write-for/src/sources.ts:231 — When every approved folder file fails, accumulated per-file diagnostics are discarded in favor of a generic no-usable-samples error → Preserve/report diagnostics for the all-files-failed path before failing",
+          "medium/spec-deviation packages/write-for/src/training-store.ts:141 — Multi-target saves can write earlier files before discovering a later stale snapshot, but the spec requires checking all snapshots before writing and requiring fresh review on PROPOSAL_STALE → Preflight all snapshots before any write, while keeping per-file rechecks inside mutation windows",
+          "medium/spec-deviation packages/write-for/src/training.ts:743 — Failed or partially failed saves leave the active session and raw samples in memory, despite the retention requirement to release in-memory samples on normal failure → Clean up admitted samples/proposals after completed save failures while still returning saved/failed paths",
+          "medium/logic packages/write-for/src/training-tools.ts:72 — Tool execute handlers ignore the Pi tool-call AbortSignal, so cancelling write_for_samples/write_for_profile may not abort extraction or distillation → Thread the execute signal into TrainingManager operations or combine it with ctx/session cancellation"
+        ],
+        "warnings": [],
+        "reviewCycles": 2
+      },
+      {
+        "title": "Portable distribution and acceptance integration",
+        "result": "FAIL",
+        "reviewStatus": "failed",
+        "commitHash": null,
+        "summary": "Review FAILED after 3 cycle(s) with 2 blocking finding(s). Headless runs do not commit at the cycle cap; changes left unstaged.",
+        "findings": [
+          "high/spec-deviation tests/pi/write-for.ts:393 — Persists from cycle 2 — pending-training cancellation disposes immediately after starting `profileTool.execute()` without waiting for the fake provider to enter its hang path; because an already-aborted signal can reject before `hangNext` is used and line 399 can read a previous reload abort, this can pass without proving shutdown cancels an in-flight training operation → Add a provider-entered latch/abort-count snapshot, wait until the proposal is actually pending, then dispose/reload and assert the caught error is AbortError with a newly recorded abort",
+          "high/spec-deviation scripts/check-package.ts:180 — The writer Node ESM consumer imports the extension entrypoint in the same program, so it does not satisfy the spec’s contract-only consumer check that imports `@birdcar/pi-write-for/contract` and uses `@birdcar/pi-services` without loading the runtime → Split out a separate clean Node ESM contract-only consumer, then keep the controlled-host extension load as a separate check",
+          "medium/spec-deviation docs/ideation/2026-09-22-pi-write-for/run-2026-09-22.html:1 — Generated ideation run artifacts/context-map changes are present in the implementation diff but are not listed in the Phase 4 file changes → Remove these generated artifacts from the phase commit or explicitly add them to the spec if they are intended deliverables"
+        ],
+        "warnings": [],
+        "reviewCycles": 3
+      }
+    ]
+  },
+  "verify": null,
+  "notesFiles": []
+}

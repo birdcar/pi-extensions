@@ -1,0 +1,59 @@
+{
+  "projectName": "Pi Write For",
+  "slug": "2026-09-22-pi-write-for",
+  "date": "2026-09-22",
+  "branch": "ideation/2026-09-22-pi-write-for",
+  "baseBranch": "main",
+  "strict": true,
+  "summary": {
+    "completed": [
+      "Headless writing and composition entrypoints"
+    ],
+    "noops": [],
+    "failed": [
+      "Hybrid voice learning and document ingestion"
+    ],
+    "skipped": [
+      "Portable distribution and acceptance integration"
+    ],
+    "results": [
+      {
+        "title": "Headless writing and composition entrypoints",
+        "result": "PASS",
+        "reviewStatus": "passed",
+        "commitHash": "d8eb836268de5690c2d272cb6922ccfdee11ce34",
+        "summary": "Implemented headless write-for composition entrypoints: registry-backed model runner, prompt engine, guarded service, command and event adapters, plus tests and supporting fixtures/docs. All declared validation commands passed. — The prior blocking issues are addressed: model execution now uses the installed complete(...) registry API, and the event adapter passes a composed abort signal so accept failures abort scheduled work even with a caller signal. The remaining issue is non-blocking cleanup in the AbortSignal.any fallback. Ready to commit after considering that listener cleanup improvement.",
+        "findings": [
+          "medium/performance packages/write-for/src/events.ts:39 — Fallback signal composition adds abort listeners to the caller signal but never removes them when the rewrite completion settles, so runtimes without AbortSignal.any can accumulate per-event listeners → Return a disposable composed signal and remove both listeners after completion/accept failure"
+        ],
+        "warnings": [],
+        "reviewCycles": 3
+      },
+      {
+        "title": "Hybrid voice learning and document ingestion",
+        "result": "FAIL",
+        "reviewStatus": "failed",
+        "commitHash": null,
+        "summary": "Review FAILED after 3 cycle(s) with 1 blocking finding(s). Headless runs do not commit at the cycle cap; changes left unstaged.",
+        "findings": [
+          "high/pattern-mismatch packages/write-for/src/training-tools.ts:48 — Tool progress updates and results use raw string content with `as never`, but the Pi extension tool API pattern requires `content: [{ type: \"text\", text: ... }]`; this can break real tool rendering/LLM tool-result handling despite fake tests accepting strings → Return proper text-part arrays for all `onUpdate` and tool result `content` values and update tests accordingly",
+          "medium/testing packages/write-for/test/documents.test.ts:29 — Cancellation coverage aborts before creating the worker, so the required worker cancellation/deadline path is not exercised → Add a test that aborts or times out an in-flight worker extraction"
+        ],
+        "warnings": [],
+        "reviewCycles": 3
+      },
+      {
+        "title": "Portable distribution and acceptance integration",
+        "result": "SKIPPED",
+        "reviewStatus": "not-run",
+        "commitHash": null,
+        "summary": "blocked by an upstream failure",
+        "findings": [],
+        "warnings": [],
+        "reviewCycles": 0
+      }
+    ]
+  },
+  "verify": null,
+  "notesFiles": []
+}
