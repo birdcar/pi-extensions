@@ -31,6 +31,17 @@ GitHub does not run CI on the version pull request because it is opened with the
 the release job runs the full check suite itself before publishing. If a publish fails, fix the
 cause and merge to `main` again: `changeset publish` retries any version missing from npm.
 
+## What to expect
+
+- The version pull request shows a failed `ci` run with no jobs. GitHub holds workflow runs on pull
+  requests opened with the workflow token for approval, then closes them as failed when the pull
+  request merges. Nothing ran; the release job's own check is what gates the publish.
+- A new version takes a minute or two to appear on npm after the release job finishes, and the
+  package page can lag longer. Check a specific version with
+  `npm view @birdcar/<package>@<version> --registry=https://registry.npmjs.org`.
+- Only versions the release job publishes carry provenance. A package's first version, published by
+  the setup script, has none.
+
 ## First-time setup and new packages
 
 npm can only attach a trusted publisher to a package that already exists. Run
