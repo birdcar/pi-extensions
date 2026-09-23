@@ -9,13 +9,15 @@ channel. Profiles remain plain Markdown/frontmatter; generation is exposed throu
 Install the extension into Pi with Node `>=22.19.0` and a compatible Pi host:
 
 ```sh
-npm install @birdcar/pi-services @birdcar/pi-write-for
+pi install npm:@birdcar/pi-write-for
 ```
 
-Load `@birdcar/pi-write-for` as a Pi extension. It does not start an external RPC server, require an
-application connector, automatically send drafts, or change the main session model. If no profile
-metadata names a model, generation uses the active Pi model for that request; a profile `model:`
-such as `openai-codex/gpt-5-codex` wins over the active model.
+Append `@<version>` to pin a release, or add `-l` to install it for the current project only. Pi
+loads the extension from the package's `pi` manifest, and `@birdcar/pi-services` installs with it as
+a dependency. It does not start an external RPC server, require an application connector,
+automatically send drafts, or change the main session model. If no profile metadata names a model,
+generation uses the active Pi model for that request; a profile `model:` such as
+`openai-codex/gpt-5-codex` wins over the active model.
 
 ## Profiles
 
