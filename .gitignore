@@ -5,6 +5,7 @@ node_modules
 out
 dist
 *.tgz
+.pi-tests
 
 # code coverage
 coverage
