@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   validateCurrentWorkspace,
   validateWorkspaceManifests,
@@ -60,20 +60,17 @@ function writerPackage(): WorkspaceManifest {
 }
 
 describe("workspace manifest validation", () => {
-  beforeAll(() => {
+  test("accepts the actual workspace after build", () => {
     const build = Bun.spawnSync(["bun", "run", "build"], {
       cwd: join(import.meta.dir, "../.."),
       stderr: "pipe",
       stdout: "pipe",
     });
     expect(build.exitCode, build.stderr.toString()).toBe(0);
-  });
-
-  test("accepts the actual workspace after build", () => {
     const result = validateCurrentWorkspace();
     expect(result.errors).toEqual([]);
     expect(result.ok).toBe(true);
-  });
+  }, 60_000);
 
   test("rejects duplicate names", async () => {
     const first = publicPackage("@birdcar/one");
