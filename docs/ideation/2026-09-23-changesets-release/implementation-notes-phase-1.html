@@ -1,0 +1,140 @@
+<!doctype html>
+<!--
+  Implementation-notes shell — copied VERBATIM by execute-spec on the first logged entry.
+  This file is the single owner of the implementation-notes format. Do not restate its
+  structure or styles elsewhere; change the format here and every future phase inherits it.
+  Copier substitutes: {N} (phase number, twice), {PROJECT}, {DATE}, {PHASE DESCRIPTION} —
+  then deletes the example entry and appends real ones inside <main class="doc-content">.
+-->
+<html lang="en" data-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Implementation Notes — Phase 1</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f7f3;
+        --fg: #191b1d;
+        --muted: #50555a;
+        --border: #dededf;
+        --accent: #2b46c7;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #131417;
+          --fg: #e9e9e4;
+          --muted: #a8aaa6;
+          --border: #2d3036;
+          --accent: #93a7ff;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0 auto;
+        max-width: 46rem;
+        padding: 2rem 1.25rem 4rem;
+        background: var(--bg);
+        color: var(--fg);
+        font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      .doc-header { border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 2rem; }
+      .doc-header h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
+      .doc-meta { margin: 0; color: var(--muted); font-size: 0.875rem; }
+      .note-entry { border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+      .note-entry h3 { margin: 0 0 0.75rem; font-size: 1.05rem; color: var(--accent); }
+      .note-entry dl { margin: 0; }
+      .note-entry dt { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-top: 0.75rem; }
+      .note-entry dt:first-child { margin-top: 0; }
+      .note-entry dd { margin: 0.15rem 0 0; }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.9em;
+        background: color-mix(in srgb, var(--fg) 8%, transparent);
+        padding: 0.1em 0.3em;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="doc-header">
+      <h1>Implementation Notes — Phase 1</h1>
+      <p class="doc-meta">Changesets Release Pipeline · 2026-09-23 · Trusted-publishing bootstrap script</p>
+    </header>
+    <main class="doc-content">
+      <section class="note-entry">
+        <h3>Bootstrap script — npm trust calls need a terminal for 2FA</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The spec captures the trust commands' output (<code>out=$("${NPM_TRUST[@]}" list …)</code>) and expects npm's "skip for 5 minutes" window to carry the remaining calls. In npm v11.20.0, <code>otplease</code> (<code>lib/utils/auth.js:10-12</code>) rethrows <code>EOTP</code> instead of prompting whenever stdin or stdout is not a TTY. A captured trust call can therefore never complete a 2FA challenge. It only succeeds inside a skip window that an earlier call with a terminal opened. On a re-run with nothing to publish (contract criterion 12), the first captured <code>trust list</code> would fail and show the y/N prompt for every package. With no skip window open, even an answer of <code>y</code> would fail at <code>trust github</code>.</dd>
+          <dt>Decision</dt>
+          <dd><code>trust github</code> keeps its stdout on the terminal (saved as fd 3) and captures only stderr, which is where <code>E409</code> appears. That way npm can ask for 2FA during the create call itself. <code>trust list</code> stays captured, because its output decides whether to skip. When it fails with <code>EOTP</code> and the script has a terminal, it runs once more attached to the terminal so npm can authenticate, and then it is read again. Every other list failure still goes to the y/N prompt. The playground's <code>_2fa</code> stub copies npm's TTY rule, and experiments 8–11 cover it. Mutation M5 (create output captured) breaks experiment 10, and M6 (no EOTP retry) breaks experiment 9.</dd>
+          <dt>Alternative</dt>
+          <dd>Rely on the skip window opened by the publish step, which is nicknisi's implicit behavior but breaks re-runs. Run the calls on a pty through <code>script(1)</code>, which has platform-specific syntax and can't be driven in this sandbox. Create first and treat 409 as "configured", which contradicts the spec's list-first logic and experiment 2.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Bootstrap script — existence check reads the HTTP status, not <code>curl -f</code></h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The spec uses <code>curl -sf -o /dev/null "${REGISTRY}${name/\//%2f}"</code>, and its playground has curl exit 22 on a 404. With <code>-f</code>, this machine's curl 8.7.1 exits 56 (not 22) on an HTTP/2 404. A DNS or network failure also becomes indistinguishable from "missing".</dd>
+          <dt>Decision</dt>
+          <dd>The script uses <code>curl -s -o /dev/null -w '%{http_code}'</code>. A 200 means the package exists and a 404 means it is missing. Anything else prints <code>!! could not check &lt;name&gt; …</code> and exits 1 before <code>bun run check</code> or any publish. A network blip can therefore never lead to a laptop publish of a newer local version (goal 1). The playground's curl stub reports the status the way real curl does: <code>000</code> with exit 6 when offline, and exit 22 only if <code>-f</code> were passed. Experiment 13 covers the unreachable case.</dd>
+          <dt>Alternative</dt>
+          <dd>Keep <code>-sf</code> and treat any non-zero exit as missing (the context map's fallback), which lets a network error fall through to <code>npm publish</code>.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Bootstrap script — replica-lag re-check on the version endpoint</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The spec says to "keep its replica-lag handling", but its error table says to re-check the package document after a failed publish. nicknisi's comment (reference script L29-32) names the package document as the endpoint that lags and the exact version endpoint as the one that "reads authoritatively".</dd>
+          <dt>Decision</dt>
+          <dd>The skip decision still reads the package document, so no second version is ever published from a laptop. The re-check after a failed <code>npm publish</code> reads <code>${REGISTRY}@birdcar%2f&lt;pkg&gt;/&lt;version&gt;</code>, so a publish that did land is not reported as failed. Experiment 5a simulates a package document that is still lagging. Mutation M7 (re-check on the document) fails it.</dd>
+          <dt>Alternative</dt>
+          <dd>Re-check the package document as the error table says. That gives a false <code>!! publish … failed</code> while the replica lags, though re-running fixes it.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Bootstrap script — summary counts and small gap decisions</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The spec doesn't say what <code>published=</code> and <code>trusted=</code> count. It names <code>gh auth status</code> without a host and says only "before the first npm 2FA prompt" for the skip note.</dd>
+          <dt>Decision</dt>
+          <dd><code>published=</code> lists packages whose <code>npm publish</code> succeeded in this run; a replica-lag recovery gets its own <code>==</code> line but isn't counted. <code>trusted=</code> lists publishers created in this run; a 409 is reported but not counted. A re-run therefore prints <code>published=none; trusted=none; actions-prs=already enabled</code>. The auth check is <code>gh auth status --hostname github.com</code>, so a stale token for another host doesn't block the script. The skip note prints once, after <code>bun run check</code> and right before the first publish, or before the first trust call when nothing is missing, so the check's output doesn't bury it. <code>sleep 2</code> follows each publish and each trust create (nicknisi, and npm's bulk-usage docs). The y/N prompt accepts only <code>y</code>. A comment next to <code>PACKAGES</code> records the publish order and that new packages are added by hand. Both trust failure exits suggest <code>npm login --registry=https://registry.npmjs.org/</code>, since a token that bypasses 2FA passes <code>whoami</code> but can't manage trust.</dd>
+          <dt>Alternative</dt>
+          <dd>Count 409s and replica-lag recoveries as done. Use a bare <code>gh auth status</code>. Print the note before <code>npm login</code>, where it would scroll away during the 46-second check.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Bootstrap script — the spec's duplicate-publisher premise is contradicted by npm's docs</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The spec justifies the y/N prompt with "npm now allows several trusted-publisher configurations per package, so creating blindly could add duplicates". npm's docs at the pinned version (<code>docs/lib/content/commands/npm-trust.md:44</code>, v11.20.0) say "Currently, the registry only supports one configuration per package. If you attempt to create a new trust relationship when one already exists, it will result in an error."</dd>
+          <dt>Decision</dt>
+          <dd>The prompt is implemented as specified. It fires only when the list fails and does no harm. A blind create would most likely return 409, which the script already treats as "already configured".</dd>
+          <dt>Alternative</dt>
+          <dd>Drop the prompt and fall through to create, as nicknisi does. The spec didn't authorize that deviation.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Go-live — what this phase could not verify</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The playground stubs every networked tool, so a few real-world facts stay unchecked until the maintainer's run.</dd>
+          <dt>Decision</dt>
+          <dd>Four things are flagged for the go-live gate rather than changed:
+            <ol>
+              <li>This session's permission classifier blocked even a <code>--dry-run</code> of <code>npx --yes npm@11.20.0 trust github …</code>. The pinned npm was never exercised, and nobody has confirmed the Socket Firewall serves it; it was published 2026-09-22. If it's blocked, move the pin to a release ≥ 11.15. The flags were checked against the v11.20.0 source (<code>lib/commands/trust/github.js</code>, <code>lib/trust-cmd.js</code>). <code>REGISTRY</code> keeps its trailing slash so npm's <code>registryIsDefault</code> check holds and the "may not support trusted publishing" warning stays off.</li>
+              <li>When <code>npm whoami</code> fails, <code>npm login</code> re-serializes the user npm config file and drops its comments, including the Iru-managed Socket Firewall block markers. The <code>registry=</code> value survives. The script never reads or writes that file itself.</li>
+              <li>Phase 2's releasing.md text says to re-run the script "whenever a package is added" and that it "runs <code>bun run check</code>". The script only covers <code>PACKAGES</code> and runs the check only when a package is missing, so phase 2's wording should match.</li>
+              <li><code>bun run check</code> leaves an untracked <code>.pi-tests/</code> directory, because <code>.pi-tests</code> is only prettier-ignored. This predates the phase. I removed the copy my verification run created.</li>
+            </ol>
+          </dd>
+          <dt>Alternative</dt>
+          <dd>None. These items need the maintainer's credentials or phase 2.</dd>
+        </dl>
+      </section>
+    </main>
+  </body>
+</html>

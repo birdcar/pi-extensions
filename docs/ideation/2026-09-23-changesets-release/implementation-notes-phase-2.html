@@ -1,0 +1,144 @@
+<!doctype html>
+<!--
+  Implementation-notes shell — copied VERBATIM by execute-spec on the first logged entry.
+  This file is the single owner of the implementation-notes format. Do not restate its
+  structure or styles elsewhere; change the format here and every future phase inherits it.
+  Copier substitutes: 2 (phase number, twice), Changesets Release Pipeline, 2026-09-23, Swap Release Please for Changesets —
+  then deletes the example entry and appends real ones inside <main class="doc-content">.
+-->
+<html lang="en" data-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Implementation Notes — Phase 2</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f7f3;
+        --fg: #191b1d;
+        --muted: #50555a;
+        --border: #dededf;
+        --accent: #2b46c7;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #131417;
+          --fg: #e9e9e4;
+          --muted: #a8aaa6;
+          --border: #2d3036;
+          --accent: #93a7ff;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0 auto;
+        max-width: 46rem;
+        padding: 2rem 1.25rem 4rem;
+        background: var(--bg);
+        color: var(--fg);
+        font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      .doc-header { border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 2rem; }
+      .doc-header h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
+      .doc-meta { margin: 0; color: var(--muted); font-size: 0.875rem; }
+      .note-entry { border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+      .note-entry h3 { margin: 0 0 0.75rem; font-size: 1.05rem; color: var(--accent); }
+      .note-entry dl { margin: 0; }
+      .note-entry dt { font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-top: 0.75rem; }
+      .note-entry dt:first-child { margin-top: 0; }
+      .note-entry dd { margin: 0.15rem 0 0; }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.9em;
+        background: color-mix(in srgb, var(--fg) 8%, transparent);
+        padding: 0.1em 0.3em;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="doc-header">
+      <h1>Implementation Notes — Phase 2</h1>
+      <p class="doc-meta">Changesets Release Pipeline · 2026-09-23 · Swap Release Please for Changesets</p>
+    </header>
+    <main class="doc-content">
+      <section class="note-entry">
+        <h3>Release Please removal — deletions left unstaged</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>Spec step 1 says to <code>git rm</code> the seven files. The workflow engine's override requires every change to stay unstaged so the sibling reviewer sees the whole phase in <code>git diff HEAD</code>.</dd>
+          <dt>Decision</dt>
+          <dd>Deleted the seven files with plain <code>rm</code>. <code>git diff HEAD</code> shows each as a deletion, and all seven are listed in the phase's changed files so the commit stage can stage them by name (<code>git add &lt;path&gt;</code> records a removal).</dd>
+          <dt>Alternative</dt>
+          <dd><code>git rm</code>, which stages the deletions and breaks the engine's unstaged-diff contract.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Workflow test — also removed <code>Job.if</code> and <code>Step.if</code></h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The spec lists the interface fields to delete as <code>needs</code>, <code>Job.permissions</code>, <code>outputs</code>, and <code>workflow_dispatch</code>. After the rewrite, nothing reads <code>Job.if</code> or <code>Step.if</code> either.</dd>
+          <dt>Decision</dt>
+          <dd>Deleted both, per the user rule to delete unused code completely. Kept <code>Workflow.permissions</code> (the CI test reads it), <code>Step.name</code> (read by <code>step()</code>), and the existing describe fixtures unchanged.</dd>
+          <dt>Alternative</dt>
+          <dd>Delete only the four fields the spec names.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Workflow test — neutral value in the token negative controls</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The old controls set every key to <code>${{ secrets.NPM_TOKEN }}</code>. That value matches the rule's regex by itself, so the <code>NODE_AUTH_TOKEN</code> and <code>_authToken</code> controls would still pass if their regex branches were deleted (scout edge case 3).</dd>
+          <dt>Decision</dt>
+          <dd>Each control adds its key to the changesets step's <code>env</code> with the value <code>"redacted"</code>, so each key has to be caught by its own branch of the regex. A scratch-copy mutation run also caught a token in another job's <code>env</code>, an <code>_authToken</code> written from a <code>run</code> step, an unpinned action in another job, a bypassed <code>publish-script</code>, a dropped aggregate verifier, and <code>|| true</code>.</dd>
+          <dt>Alternative</dt>
+          <dd>Keep the old secret-expression value, which doesn't distinguish the three keys.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>docs/releasing.md — bootstrap and gate wording checked against real behavior</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The spec's target says the bootstrap "runs <code>bun run check</code>" and should be re-run "whenever a package is added". Its error table says a docs-only PR "should not happen" to fail <code>changeset status</code>. In practice, the phase 1 script runs the check only before a publish and reads a fixed <code>PACKAGES</code> array, and Changesets treats any file under a package directory (README, tests) as a package change. The spec lets releasing.md's wording change as long as every fact stays.</dd>
+          <dt>Decision</dt>
+          <dd>The doc now says four things. The script publishes missing packages after <code>bun run check</code> passes. A new package has to be added to <code>PACKAGES</code> (after its dependencies) and the script re-run before that package's first release. CI fails a PR that touches any file in a package directory without a changeset, and <code>bun changeset --empty</code> covers package edits that shouldn't release. The prompts need a TTY, so scripts and agents pass flags instead (<code>bun changeset --patch &lt;pkg&gt; -m "…"</code>). Both non-interactive forms were tested here. AGENTS.md and README use the spec's text word for word, wrapped by prettier.</dd>
+          <dt>Alternative</dt>
+          <dd>The spec's text word for word, which gets the script and the gate's scope wrong.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Lockfile — the decision premise was off, and some packages were re-hoisted</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The spec says bun.lock "also has two legitimate <code>https://github.com/</code> entries that must keep their URL". It had none; all 466 URLs pointed at the proxy.</dd>
+          <dt>Decision</dt>
+          <dd>Kept the host-specific hook, which still protects future git or tarball dependencies. After the swap, bun.lock holds no absolute URLs at all. Removing release-please moved agent-base 9.0.0, http-proxy-agent 9.1.0, and https-proxy-agent 9.1.0 up from nested <code>@earendil-works/pi-ai</code> entries, with identical integrity hashes. <code>@changesets/cli</code> pulled in picomatch 4.0.7 at the top level. No surviving entry was re-resolved. A replay showed <code>bun add --ignore-scripts</code> rewriting 348 entries back to proxy URLs, and the same add with the hook leaving 0.</dd>
+          <dt>Alternative</dt>
+          <dd>Not applicable (a surprise in the codebase, not a choice).</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Verification — the frozen install survives <code>changeset version</code></h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>The scout couldn't re-check that <code>bun install --frozen-lockfile</code> still passes after <code>changeset version</code> leaves bun.lock's workspace metadata at 0.1.0 (the risk behind the "no lockfile refresh" decision).</dd>
+          <dt>Decision</dt>
+          <dd>Checked it two ways. Probe 6, replayed with output visible: pi-services went to 1.0.0 and pi-write-for to 0.1.1 with <code>^1.0.0</code>, the frozen install passed, and bun.lock didn't change. A go-live dry run with only <code>publish-from-ci.md</code>: both packages went to 0.1.1 with range <code>^0.1.1</code>, the frozen install and the full <code>bun run check</code> passed, and the tarballs verified at 0.1.1. No lockfile refresh is needed, and the rejected <code>--lockfile-only</code> alternative stays rejected.</dd>
+          <dt>Alternative</dt>
+          <dd>Not applicable.</dd>
+        </dl>
+      </section>
+      <section class="note-entry">
+        <h3>Out-of-scope leftovers flagged, not changed</h3>
+        <dl>
+          <dt>Context</dt>
+          <dd>Two leftovers sit outside the spec's file list.</dd>
+          <dt>Decision</dt>
+          <dd>Left both as they are. (a) <code>packages/write-for/README.md:417-418</code> says the mechanical checks prove "release planning", which was the deleted publish planner. Editing it counts as a package change, so it could go out with the go-live patch changeset. (b) After <code>publish.ts</code> was deleted, nothing reads <code>scripts/check-package.ts</code>'s <code>PackageArtifactOptions.rootDir</code> or its returned <code>integrity</code> and <code>repositoryUrl</code>. The spec says to leave generic packaging untouched, which conflicts with "delete unused code", so this is left for a follow-up.</dd>
+          <dt>Alternative</dt>
+          <dd>Widen the phase and change both now.</dd>
+        </dl>
+      </section>
+    </main>
+  </body>
+</html>
