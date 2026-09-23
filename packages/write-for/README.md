@@ -414,8 +414,8 @@ extensions loaded, try:
 
 ## Acceptance
 
-Mechanical package and lifecycle checks prove portable loading, contracts, parsing, and release
-planning. Voice quality is a human observation: train at least two registers on a user-approved
-corpus, draft three held-out messages, and accept only when the user's facts and recognizable voice
-need no substantial tone rewrite. If no live reviewer/corpus/model is available, report mechanical
-checks passed with voice acceptance pending.
+Mechanical package and lifecycle checks prove portable loading, contracts, and parsing. Voice
+quality is a human observation: train at least two registers on a user-approved corpus, draft three
+held-out messages, and accept only when the user's facts and recognizable voice need no substantial
+tone rewrite. If no live reviewer/corpus/model is available, report mechanical checks passed with
+voice acceptance pending.

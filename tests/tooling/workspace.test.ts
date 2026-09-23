@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   validateCurrentWorkspace,
   validateWorkspaceManifests,
@@ -31,21 +31,6 @@ function publicPackage(name = "@birdcar/pi-services"): WorkspaceManifest {
 async function fixtureRoot(manifests: WorkspaceManifest[]): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "pi-workspace-"));
   writeFileSync(join(dir, "LICENSE"), "license\n");
-  const releasePackages: Record<string, Record<string, string>> = {};
-  for (const manifest of manifests) {
-    if (manifest.path !== "package.json" && manifest.data.private !== true) {
-      releasePackages[manifest.path.replace(/\/package\.json$/, "")] = {
-        component: String(manifest.data.name).replace("@birdcar/", ""),
-        "package-name": String(manifest.data.name),
-        "release-type": "node",
-        "initial-version": String(manifest.data.version),
-      };
-    }
-  }
-  writeFileSync(
-    join(dir, "release-please-config.json"),
-    JSON.stringify({ "separate-pull-requests": true, packages: releasePackages }, null, 2),
-  );
   for (const manifest of manifests) {
     const packageDir = join(dir, manifest.path, "..");
     mkdirSync(packageDir, { recursive: true });
@@ -75,20 +60,17 @@ function writerPackage(): WorkspaceManifest {
 }
 
 describe("workspace manifest validation", () => {
-  beforeAll(() => {
+  test("accepts the actual workspace after build", () => {
     const build = Bun.spawnSync(["bun", "run", "build"], {
       cwd: join(import.meta.dir, "../.."),
       stderr: "pipe",
       stdout: "pipe",
     });
     expect(build.exitCode, build.stderr.toString()).toBe(0);
-  });
-
-  test("accepts the actual workspace after build", () => {
     const result = validateCurrentWorkspace();
     expect(result.errors).toEqual([]);
     expect(result.ok).toBe(true);
-  });
+  }, 60_000);
 
   test("rejects duplicate names", async () => {
     const first = publicPackage("@birdcar/one");

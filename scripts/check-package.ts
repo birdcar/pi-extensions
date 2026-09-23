@@ -10,12 +10,9 @@ export interface PackageArtifact {
   tarball: string;
   filename: string;
   files: string[];
-  integrity?: string;
-  repositoryUrl?: string;
 }
 
 export interface PackageArtifactOptions {
-  rootDir?: string;
   packagePath?: string;
   keepTemp?: boolean;
   dependencyTarballs?: string[];
@@ -34,7 +31,7 @@ function requireReadmeAndLicense(packageDir: string): void {
 }
 
 export function validatePackageArtifact(options: PackageArtifactOptions = {}): PackageArtifact {
-  const root = resolve(options.rootDir ?? import.meta.dirname, options.rootDir ? "." : "..");
+  const root = resolve(import.meta.dirname, "..");
   const packagePath = options.packagePath ?? "packages/services";
   const packageDir = resolve(root, packagePath);
   const temp = mkdtempSync(join(tmpdir(), "pi-package-"));
@@ -47,7 +44,6 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
       filename: string;
       name: string;
       version: string;
-      integrity?: string;
       files: Array<{ path: string }>;
     }>;
     if (!packed) throw new Error("npm pack produced no tarball metadata");
@@ -85,13 +81,6 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
     if (manifest.name !== packed.name || manifest.version !== packed.version) {
       throw new Error(`installed package metadata does not match ${packed.name}@${packed.version}`);
     }
-    const repository = manifest.repository as string | { url?: unknown } | undefined;
-    const repositoryUrl =
-      typeof repository === "string"
-        ? repository
-        : typeof repository?.url === "string"
-          ? repository.url
-          : undefined;
     for (const field of ["dependencies", "optionalDependencies", "peerDependencies"] as const) {
       const deps = manifest[field] as Record<string, string> | undefined;
       for (const [name, version] of Object.entries(deps ?? {})) {
@@ -276,8 +265,6 @@ export function validatePackageArtifact(options: PackageArtifactOptions = {}): P
       tarball,
       filename: packed.filename,
       files: paths,
-      integrity: packed.integrity,
-      repositoryUrl,
     };
   } finally {
     if (!options.keepTemp) rmSync(temp, { recursive: true, force: true });

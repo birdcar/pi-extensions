@@ -1,0 +1,52 @@
+{
+  "projectName": "Changesets Release Pipeline",
+  "slug": "2026-09-23-changesets-release",
+  "date": "2026-09-23",
+  "branch": "ideation/2026-09-23-changesets-release",
+  "baseBranch": "main",
+  "strict": true,
+  "summary": {
+    "completed": [
+      "Trusted-publishing bootstrap script",
+      "Swap Release Please for Changesets"
+    ],
+    "noops": [],
+    "failed": [],
+    "skipped": [],
+    "results": [
+      {
+        "title": "Trusted-publishing bootstrap script",
+        "result": "PASS",
+        "reviewStatus": "passed",
+        "commitHash": "a76d4a7eedcd7376755e6a73b51e08c0433e304e",
+        "summary": "Added scripts/setup-trusted-publishing.sh (mode 100755, registered with `git add -N`). It is idempotent and follows the spec: login-if-needed, publish only the packages missing from npm, gated by `bun run check`, attach the release.yml trusted publisher, and enable Actions PR creation, with every npm call pinned to the public registry. It deviates from the spec in three documented places. First, the existence check reads the HTTP status instead of `curl -f`, so a network error can't lead to a publish. Second, the replica-lag re-check uses the version endpoint. Third, the trust calls keep stdout on the terminal (or retry once on EOTP) because npm's otplease refuses to prompt for 2FA without a TTY. All checks pass on bash 3.2 and 5.3: shellcheck, bash -n, the 43-run throwaway playground (9/9 mutation controls caught), bun run lint, bun run check:docs, and the full bun run check. — Verdict: PASS, with 4 low findings and nothing blocking. The script matches the spec: every npm and npx call passes `--registry=https://registry.npmjs.org/`, trust runs through the pinned npm@11.20.0, the two packages go in a fixed order, the `bun run check` gate runs before any publish, trust is listed before it is created (with 409 handling and a `/dev/tty` y/N prompt when the list can't be read), the Actions setting is read before it is changed, and the file mode is 100755. The changes from the spec (keeping stdout on the terminal for npm 2FA with a retry on EOTP, the 200/404 existence check, re-checking the version endpoint after a failed publish) are justified and recorded in implementation-notes-phase-1.html. I didn't run shellcheck or the playground, and couldn't read nicknisi's script because it is only in the remote repo, so I checked against the spec's excerpt. It is ready to commit; the findings are optional cleanups (the summary count after replica lag, a curl timeout, and syncing the spec's Error Handling table).",
+        "findings": [
+          "low/logic scripts/setup-trusted-publishing.sh:82 — When a publish exits non-zero but the version endpoint then shows the version (replica lag), the package was still published by this run, yet it is left out of `published`. A first run can then print `published=none` even though it created the package on npm, which makes the output a misleading record (the spec says 'its output is the record'). → Add the name in the replica-lag branch too, e.g. `published=\"${published:+$published,}$name\"`, or add a separate `recovered=` field to the summary.",
+          "low/spec-deviation scripts/setup-trusted-publishing.sh:32 — The existence check reads `%{http_code}` and only continues on 200 or 404, where the spec's target structure uses `curl -sf`. This is safer: an unreachable registry can never lead to a publish. It is written up in implementation-notes-phase-1.html, but it goes beyond nicknisi's approach, and the decision log leans against extra hardening. → Keep it, and have phase 2's docs/releasing.md (or the spec's Error Handling table) say that a non-200/404 status stops the script, so the recorded design matches the code.",
+          "low/spec-deviation scripts/setup-trusted-publishing.sh:81 — After a failed publish, the re-check reads the version endpoint. The spec's Error Handling table says to re-check the package document. The version endpoint is nicknisi's authoritative-read pattern, the change is documented, and the skip decision (line 48) still reads the package document, so goal 1 holds. → No code change; fix the spec's Error Handling row so the two agree.",
+          "low/performance scripts/setup-trusted-publishing.sh:32 — `http_status` runs curl with no timeout, so a stalled connection to registry.npmjs.org hangs the script with no output. → Add `--max-time 30` (or `--connect-timeout 10 --max-time 30`) to the curl call; timeouts already show up as non-200/404 codes, which the script handles by exiting."
+        ],
+        "warnings": [],
+        "reviewCycles": 1
+      },
+      {
+        "title": "Swap Release Please for Changesets",
+        "result": "PASS",
+        "reviewStatus": "passed",
+        "commitHash": "ab4b1ceaf94b35f4596614280814f1da8b48d543",
+        "summary": "Replaced Release Please with Changesets. The phase adds @changesets/cli 3.0.3, a hand-written .changeset/ folder with the go-live patch changeset, and a SHA-pinned changesets/action v2.1.2 release.yml that runs `bun run check && changeset publish`. It also adds a ci.yml changeset-status job and rewrites the workflow test around the three rules, with negative controls. bun.lock is now registry-neutral and a root postinstall hook keeps it that way. The 7 Release Please files and the check-workspace registration check are deleted, and the phase adds package repository metadata (plus keywords on pi-write-for), docs, and the AGENTS.md changeset rule. All validation passes: bun run check, actionlint, prettier, and contract probes 2-7. A go-live dry run (changeset version, then a frozen install and bun run check) produced 0.1.1 for both packages with range ^0.1.1. Flagged but unchanged: packages/write-for/README.md:417-418 still says 'release planning', and scripts/check-package.ts has fields nothing reads since publish.ts was deleted. — The diff matches spec-phase-2.md closely. The `.changeset/` files, root scripts (including the exact `release` and `postinstall` strings), release.yml, the ci.yml changeset-status job, the three-rule workflow test with its negative controls, the removal of all seven Release Please files, the registration check and its fixture, the package `repository` and `keywords` metadata, and the docs all match the spec. bun.lock has no proxy URLs left, no release-please entries, and pins @changesets/cli 3.0.3. No Release Please references remain outside docs/ideation. I checked two things against the installed CLI: 3.0.3 has the `--patch`, `-m` and `--empty` flags that the extra docs/releasing.md text describes, and `changeset publish` falls back to npm under Bun, so the OIDC/provenance setup through npm 11.6.0 holds. It's ready to commit once `bun run check` and the contract probes pass locally; I did not run them, because this review is read-only.",
+        "findings": [],
+        "warnings": [],
+        "reviewCycles": 1
+      }
+    ]
+  },
+  "verify": {
+    "line": "VERIFY 2026-09-23-changesets-release: commits=2/2 pass=8 fail=3 judgment=1",
+    "exitCode": 1
+  },
+  "notesFiles": [
+    "implementation-notes-phase-1.html",
+    "implementation-notes-phase-2.html"
+  ]
+}

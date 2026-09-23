@@ -2,7 +2,17 @@
   "name": "@birdcar/pi-write-for",
   "version": "0.1.0",
   "description": "Pi extension foundation for writing in a selected voice and channel.",
+  "keywords": [
+    "pi",
+    "pi-coding-agent",
+    "pi-package"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/birdcar/pi-extensions.git",
+    "directory": "packages/write-for"
+  },
   "type": "module",
   "exports": {
     ".": {

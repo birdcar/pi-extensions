@@ -1,77 +1,52 @@
 # Releasing
 
-The repository uses Release Please manifest mode for independent package releases.
-`packages/services` is configured as component `pi-services`, producing tags such as
-`pi-services-v0.1.0`; `packages/write-for` is configured as component `pi-write-for`, producing tags
-such as `pi-write-for-v0.1.0`. Each package gets its own changelog when releases begin.
+Every public package under `packages/*` is versioned and published independently with
+[Changesets](https://changesets.dev). Publishing happens in GitHub Actions through npm trusted
+publishing (OIDC), so every version after a package's first carries a provenance attestation and no
+npm token exists anywhere.
 
-Release routing is path based. Root-only maintenance does not automatically release every package; a
-tooling change that affects shipped output needs an intentional package-level change. Compatible
-helper updates do not rewrite consumers automatically. Pi Write For depends on the services helper,
-so publish planning validates `@birdcar/pi-services` first in a batch and blocks a writer-only
-publication when the required helper release is not already available. If a future consumer must
-adopt a newly released helper range, release and publish the helper first, then land an explicit
-consumer `fix(deps)` change.
+## With every change
 
-## Local commands
+Add a changeset for any user-facing change to a package: run `bun changeset`, pick the packages and
+the bump, and commit the generated file with your change. The prompts need an interactive terminal;
+from a script or an agent, pass the bump and summary as flags instead, for example
+`bun changeset --patch @birdcar/pi-write-for -m "Fix the summary"`. Docs, config, and CI-only
+changes don't need one.
 
-Use these before handoff:
+CI fails a pull request that changes any file in a package directory without a changeset, including
+a package README or test. For a change inside a package that should not release, commit an empty
+changeset from `bun changeset --empty`.
 
-```sh
-bun run test:release
-bun run test:release-lock
-bun run test:publish
-bun run test:ci
-bun run check:docs
-bun run check:package
-bun run check
-```
+## What happens on merge
 
-`bun run check` includes workspace validation, package artifact validation, release tests,
-publishing tests, CI/workflow assertions, docs checks, typecheck, lint, service tests, execution
-tests, and Pi lifecycle tests.
+[release.yml](../.github/workflows/release.yml) runs on every push to `main`:
 
-## Workflow model
+- While changesets are pending, it opens or updates the `chore: version packages` pull request,
+  which bumps versions, writes each package's changelog, and removes the consumed changesets.
+- Merging that pull request runs `bun run release`: `bun run check`, then `changeset publish`. Every
+  version npm does not have yet is published with provenance, tagged `@birdcar/<package>@<version>`,
+  and given a GitHub Release.
 
-[`../.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs read-only checks for pull requests
-and main. [`../.github/workflows/release.yml`](../.github/workflows/release.yml) is disabled until
-`RELEASE_ENABLED=true` is set. Release management uses GitHub App credentials only for repository
-automation; those credentials are not npm authentication.
+GitHub does not run CI on the version pull request because it is opened with the workflow token, so
+the release job runs the full check suite itself before publishing. If a publish fails, fix the
+cause and merge to `main` again: `changeset publish` retries any version missing from npm.
 
-Release PRs refresh `bun.lock` with the pinned Bun version and reject any non-lockfile diff.
-Publication is scoped to Release Please outputs and validates package path, version, tag, SHA,
-package metadata, and the previously checked tarball before calling
-`npm publish <tarball> --access public`.
+## First-time setup and new packages
 
-npm authentication is trusted publishing through GitHub Actions OIDC only. Do not add `NPM_TOKEN`,
-`NODE_AUTH_TOKEN`, token-bearing `.npmrc` configuration, `npm whoami` preflights, or a fallback
-registry credential. The publish job uses Node 24 and npm 11.6.0, with job-local `id-token: write`.
+npm can only attach a trusted publisher to a package that already exists. Run
+[scripts/setup-trusted-publishing.sh](../scripts/setup-trusted-publishing.sh) once before the first
+release. It logs in to npmjs.org if needed, publishes any package that is not on npm yet after
+`bun run check` passes, attaches the release workflow as each package's trusted publisher, and lets
+GitHub Actions open pull requests. It is safe to re-run.
 
-## Exact-tag recovery
+To add a package, list its directory in the script's `PACKAGES` array, after the packages it depends
+on, and run the script again before the package's first release.
 
-If publication must be retried for an existing release tag after activation, dispatch the same
-workflow at the exact tag:
+## Rules
 
-```sh
-gh workflow run release.yml --ref pi-services-v0.1.0 -f release_tag=pi-services-v0.1.0
-# or: gh workflow run release.yml --ref pi-write-for-v0.1.0 -f release_tag=pi-write-for-v0.1.0
-```
-
-Recovery builds the tagged source, checks the peeled tag commit and package version, skips an exact
-already-published version, and fails immutable conflicts or registry/auth/network errors. Never
-create, move, or overwrite tags as a recovery side effect.
-
-## Ready-to-connect checklist
-
-1. Connect the intended GitHub repository later and update each package's `repository` metadata to
-   the actual URL and directory.
-2. Bind GitHub release automation, enable required PR checks, and grant the App only the
-   contents/issues/pull-request permissions required for Release Please and lock refreshes.
-3. Verify package ownership and the existing npm trusted-publishing entry for
-   [`../.github/workflows/release.yml`](../.github/workflows/release.yml), repository, optional
-   environment, and direct `npm publish` permission.
-4. If npm requires account-side setup for a new package, leave that to the maintainer; do not
-   bootstrap token-based CI.
-5. After activation, observe a real release PR, CI run, package publication, and provenance where
-   supported. Hosted CI, registry publication, and live provenance are intentionally outside this
-   local foundation phase.
+- npm authentication in workflows is OIDC only: never add an npm token, `NODE_AUTH_TOKEN`, or a
+  token-bearing `.npmrc` to CI.
+- Pin every action to a full commit SHA.
+- Keep `bun.lock` registry-neutral: the root `postinstall` hook blanks the tarball URLs a local
+  registry proxy records, so GitHub-hosted runners install from the public registry. Don't install
+  with `--ignore-scripts`.
