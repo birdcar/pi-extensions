@@ -1,5 +1,12 @@
 # @birdcar/pi-write-for
 
+## 0.1.3
+
+### Patch Changes
+
+- e03fc2c: Declare TypeBox as a host-provided wildcard peer dependency to prevent duplicate runtime modules and
+  Pi startup warnings.
+
 ## 0.1.2
 
 ### Patch Changes
