@@ -1,9 +1,25 @@
-import { rmSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { describe, expect, test } from "bun:test";
 import { validatePackageArtifact } from "../../scripts/check-package.ts";
 
 describe("write-for package artifact", () => {
+  test.each(["@earendil-works/pi-coding-agent", "typebox"])(
+    "declares host-provided %s only as a wildcard peer",
+    (name) => {
+      const manifest = JSON.parse(
+        readFileSync(new URL("../../packages/write-for/package.json", import.meta.url), "utf8"),
+      ) as {
+        dependencies?: Record<string, string>;
+        optionalDependencies?: Record<string, string>;
+        peerDependencies?: Record<string, string>;
+      };
+      expect(manifest.dependencies?.[name]).toBeUndefined();
+      expect(manifest.optionalDependencies?.[name]).toBeUndefined();
+      expect(manifest.peerDependencies?.[name]).toBe("*");
+    },
+  );
+
   test("ships the extension, public contract, and private document worker", () => {
     const services = validatePackageArtifact({ keepTemp: true });
     try {
